@@ -10,6 +10,7 @@ import random
 import os
 import csv
 from datetime import datetime
+import serial
 
 try:
     from psychopy import parallel
@@ -29,13 +30,40 @@ FIXATION_POST_STREAM_RESPONSE_DUR = 0.5
 FIXATION_POST_STREAM_NO_RESPONSE_DUR = 1.000 
 
 # --- Trigger Values ---
-TRIGGER_STREAM_START = 1    # First item onset
-TRIGGER_TARGET_ONSET = 2    # Target presentation 
-TRIGGER_STREAM_END = 3      # End of stream (post-stream fixation onset)
-TRIGGER_DURATION_MS = 10    # Duration to keep trigger on (in ms)
+# New trigger codes to avoid conflicts with stimulus-specific triggers
+TRIGGER_STREAM_START = 100    # First item onset
+TRIGGER_TARGET_ONSET = 200    # Target presentation 
+TRIGGER_STREAM_END = 300      # End of stream (post-stream fixation onset)
 
-# Default port address for parallel port
-PARALLEL_PORT_ADDRESS = 0x378  # Standard address, may need adjustment for the system
+# Dictionary mapping stimuli to trigger values
+TRIGGER_MAP = {
+    # Number stimuli (distractors)
+    '1': 1,
+    '2': 2,
+    '3': 3,
+    '4': 4,
+    '5': 5,
+    '6': 6,
+    '7': 7,
+    '8': 8,
+    '9': 9,
+    # Letter stimuli (targets)
+    'C': 10,
+    'D': 11,
+    'H': 12,
+    'K': 13,
+    'N': 14,
+    'F': 15,
+    'R': 16,
+    'S': 17,
+    'V': 18,
+    'Z': 19
+}
+
+# Serial port configuration for trigger device
+SERIAL_PORT_AVAILABLE = True
+SERIAL_PORT_NAME = 'COM3'  # Default port name, may need adjustment for the system
+SERIAL_BAUD_RATE = 115200  # Default baud rate, adjust based on the device
 
 # --- Item Duration ---
 # Will determine item duration in frames based on measured refresh rate
@@ -48,31 +76,35 @@ CONDITIONS_FILE = 'contrast_conditions.csv'
 DATA_FOLDER = 'data' # Folder to save data files
 STIM_SIZE_DEG = 1.0  # Fixed stimulus size in degrees of visual angle
 
-# --- Initialize parallel port ---
-def initialize_parallel_port():
-    """Initialize the parallel port for sending triggers if available."""
-    if (PARALLEL_PORT_AVAILABLE):
+# --- Initialize serial port ---
+def initialize_serial_port():
+    """Initialize the serial port for sending triggers to BioSemi/LabJack."""
+    if SERIAL_PORT_AVAILABLE:
         try:
-            port = parallel.ParallelPort(address=PARALLEL_PORT_ADDRESS)
-            port.setData(0)
-            print(f"Parallel port initialized at address {PARALLEL_PORT_ADDRESS}")
-            return port
+            ser = serial.Serial(
+                port=SERIAL_PORT_NAME,
+                baudrate=SERIAL_BAUD_RATE
+            )
+            # Reset to zero
+            ser.write(bytes([0]))
+            print(f"Serial port initialized at {SERIAL_PORT_NAME}, baudrate {SERIAL_BAUD_RATE}")
+            return ser
         except Exception as e:
-            print(f"WARNING: Failed to initialize parallel port: {e}")
+            print(f"WARNING: Failed to initialize serial port: {e}")
             print("EEG triggers will be simulated.")
             return None
     return None
 
 # --- Send trigger function ---
 def send_trigger(port, trigger_value):
-    """Send a trigger value to the parallel port."""
-    if port is not None and PARALLEL_PORT_AVAILABLE:
-        port.setData(trigger_value)
-        logging.exp(f"TRIGGER: Sent value {trigger_value} to parallel port")
-        core.wait(TRIGGER_DURATION_MS/1000.0)
-        port.setData(0)
+    """Send a trigger value to the serial port."""
+    if port is not None and SERIAL_PORT_AVAILABLE:
+        port.write(bytes([trigger_value]))
+        logging.exp(f"TRIGGER: Sent value {trigger_value} to serial port")
+        # No delay needed - just reset immediately
+        port.write(bytes([0]))  # Reset trigger
     else:
-        logging.exp(f"TRIGGER: Simulated sending value {trigger_value} to parallel port")
+        logging.exp(f"TRIGGER: Simulated sending value {trigger_value} to serial port")
 
 # --- Michelson Contrast Conversion ---
 def contrast_pct_to_color_value(contrast_pct, background_color=0):
@@ -169,7 +201,7 @@ PRACTICE_DURATION_FRAMES = max(1, round((ITEM_DURATION_MS / PRACTICE_SPEED_FACTO
 print(f"Item duration: {ITEM_DURATION_FRAMES} frames ({ITEM_DURATION_FRAMES * frameDur * 1000:.2f} ms)")
 print(f"Practice duration: {PRACTICE_DURATION_FRAMES} frames ({PRACTICE_DURATION_FRAMES * frameDur * 1000:.2f} ms)")
 
-port = initialize_parallel_port()
+port = initialize_serial_port()
 
 welcome_text = visual.TextStim(win=win, text="Welcome to the experiment!\n\nPress SPACE or ENTER to continue.", height=1.0, wrapWidth=30, color=-1)
 instruction_text = visual.TextStim(win=win, text=(
@@ -359,6 +391,11 @@ def run_rsvp_trial(win, stim_color, item_duration_frames, require_response=True,
                 send_trigger(port, TRIGGER_TARGET_ONSET)
                 logging.exp(f"Target Letter Onset - Letter: {item}")
             
+            if frame == 0:
+                # Send item-specific trigger for each stimulus
+                send_trigger(port, TRIGGER_MAP[item])
+                logging.exp(f"Stimulus Onset - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
+            
             rsvp_stim.draw()
             win.flip()
 
@@ -414,7 +451,7 @@ for trial_num_practice, practice_trial_data in enumerate(practice_handler):
 
 for eye in ['left', 'right']:
 
-    if eye == 'left':
+    if (eye == 'left'):
         show_message(left_eye_instruction_text)
         block_prefix = 'left_eye'
     else:
@@ -506,9 +543,9 @@ exp.saveAsWideText(filename + '.csv')
 exp.saveAsPickle(filename + '.psydat')
 logging.flush()
 
-if port is not None and PARALLEL_PORT_AVAILABLE:
-    port.setData(0)
-    logging.exp("Parallel port reset at experiment end")
+if port is not None and SERIAL_PORT_AVAILABLE:
+    port.write(bytes([0]))
+    logging.exp("Serial port reset at experiment end")
 
 win.close()
 core.quit()

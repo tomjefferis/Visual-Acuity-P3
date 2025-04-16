@@ -5,13 +5,14 @@ The target appears in 50% of streams, and participants respond whether they saw 
 Runs separate blocks for left and right eyes.
 """
 
-from psychopy import core, visual, gui, data, event, monitors
+from psychopy import core, visual, gui, data, event, logging, monitors
 import random
 import os
 import csv
+import numpy as np
 from datetime import datetime
+import serial
 
-# EEG triggers
 try:
     from psychopy import parallel
     PARALLEL_PORT_AVAILABLE = True
@@ -30,13 +31,30 @@ FIXATION_POST_STREAM_RESPONSE_DUR = 0.5
 FIXATION_POST_STREAM_NO_RESPONSE_DUR = 1.000 
 
 # --- Trigger Values ---
-TRIGGER_STREAM_START = 1    # First item onset
-TRIGGER_TARGET_ONSET = 2    # Target presentation 
-TRIGGER_STREAM_END = 3      # End of stream (post-stream fixation onset)
+# New trigger codes to avoid conflicts with stimulus-specific triggers
+TRIGGER_STREAM_START = 100    # First item onset
+TRIGGER_TARGET_ONSET = 200    # Target presentation 
+TRIGGER_STREAM_END = 300      # End of stream (post-stream fixation onset)
+
+# Dictionary mapping stimuli to trigger values
+TRIGGER_MAP = {
+    "target": 50,   # Target orientation
+    0: 20,          # First distractor orientation
+    1: 21,          # Second distractor orientation
+    2: 22,          # Third distractor orientation
+    3: 23,          # Fourth distractor orientation
+    4: 24,          # Fifth distractor orientation
+    5: 25,          # Sixth distractor orientation
+    6: 26,          # Seventh distractor orientation
+    7: 27           # Eighth distractor orientation
+}
+
 TRIGGER_DURATION_MS = 10    # Duration to keep trigger on (in ms)
 
-# Default port address for parallel port
-PARALLEL_PORT_ADDRESS = 0x378  # Standard address, may need adjustment for the system
+# Serial port configuration for trigger device
+SERIAL_PORT_AVAILABLE = True
+SERIAL_PORT_NAME = 'COM3'  # Default port name, may need adjustment for the system
+SERIAL_BAUD_RATE = 115200  # Default baud rate, adjust based on the device
 
 # --- Item Duration ---
 # Will determine item duration in frames based on measured refresh rate
@@ -48,28 +66,35 @@ N_PRACTICE_TRIALS = 2
 CONDITIONS_FILE = 'conditions.csv'
 DATA_FOLDER = 'data' # Folder to save data files
 
-# --- Initialize parallel port ---
-def initialize_parallel_port():
-    """Initialize the parallel port for sending triggers if available."""
-    if (PARALLEL_PORT_AVAILABLE):
+# --- Initialize serial port ---
+def initialize_serial_port():
+    """Initialize the serial port for sending triggers to BioSemi/LabJack."""
+    if SERIAL_PORT_AVAILABLE:
         try:
-            port = parallel.ParallelPort(address=PARALLEL_PORT_ADDRESS)
-            port.setData(0)
-            print(f"Parallel port initialized at address {PARALLEL_PORT_ADDRESS}")
-            return port
+            ser = serial.Serial(
+                port=SERIAL_PORT_NAME,
+                baudrate=SERIAL_BAUD_RATE
+            )
+            # Reset to zero
+            ser.write(bytes([0]))
+            print(f"Serial port initialized at {SERIAL_PORT_NAME}, baudrate {SERIAL_BAUD_RATE}")
+            return ser
         except Exception as e:
-            print(f"WARNING: Failed to initialize parallel port: {e}")
+            print(f"WARNING: Failed to initialize serial port: {e}")
             print("EEG triggers will be simulated.")
             return None
     return None
 
 # --- Send trigger function ---
 def send_trigger(port, trigger_value):
-    """Send a trigger value to the parallel port."""
-    if port is not None and PARALLEL_PORT_AVAILABLE:
-        port.setData(trigger_value)
-        core.wait(TRIGGER_DURATION_MS/1000.0)
-        port.setData(0)
+    """Send a trigger value to the serial port."""
+    if port is not None and SERIAL_PORT_AVAILABLE:
+        port.write(bytes([trigger_value]))
+        logging.exp(f"TRIGGER: Sent value {trigger_value} to serial port")
+        # No delay needed - just reset immediately
+        port.write(bytes([0]))  # Reset trigger
+    else:
+        logging.exp(f"TRIGGER: Simulated sending value {trigger_value} to serial port")
         
 # --- LogMAR Conversion ---
 def logmar_to_degrees(logmar_value):
@@ -158,7 +183,7 @@ else:
 ITEM_DURATION_FRAMES = max(1, round(ITEM_DURATION_MS / (frameDur * 1000)))
 PRACTICE_DURATION_FRAMES = max(1, round((ITEM_DURATION_MS / PRACTICE_SPEED_FACTOR) / (frameDur * 1000)))
 
-port = initialize_parallel_port()
+port = initialize_serial_port()
 
 # --- Load Stimuli Images ---
 target_image = visual.ImageStim(win=win, image='images/target.png', units='deg')
@@ -334,6 +359,11 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
                 send_trigger(port, TRIGGER_TARGET_ONSET)
                 # Print target size
                 print(f"Target frame actual size: {rsvp_stim.size}")
+            
+            if frame == 0:
+                # Send item-specific trigger for each stimulus
+                send_trigger(port, TRIGGER_MAP[item])
+                logging.exp(f"Stimulus Onset - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
             
             rsvp_stim.draw()
             win.flip()

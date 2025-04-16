@@ -21,7 +21,7 @@ except (ImportError, ModuleNotFoundError):
 
 # --- Constants ---
 # Target frequency - percentage of trials that should contain the target (0-100)
-TARGET_PRESENT_PERCENT = 50 
+TARGET_PRESENT_PERCENT = 100 
 N_STREAM_ITEMS = 16
 TARGET_POS_MIN = 3 
 TARGET_POS_MAX = 8 
@@ -40,10 +40,10 @@ PARALLEL_PORT_ADDRESS = 0x378  # Standard address, may need adjustment for the s
 
 # --- Item Duration ---
 # Will determine item duration in frames based on measured refresh rate
-ITEM_DURATION_MS = 100  # Target duration in milliseconds
-PRACTICE_SPEED_FACTOR = 1  # Practice speed
+ITEM_DURATION_MS = 130  # Target duration in milliseconds
+PRACTICE_SPEED_FACTOR = 0.75  # Practice speed
 
-N_TRIALS_PER_SIZE = 16
+N_TRIALS_PER_SIZE = 1
 N_PRACTICE_TRIALS = 2 
 CONDITIONS_FILE = 'conditions.csv'
 DATA_FOLDER = 'data' # Folder to save data files
@@ -163,13 +163,10 @@ port = initialize_parallel_port()
 # --- Load Stimuli Images ---
 target_image = visual.ImageStim(win=win, image='images/target.png', units='deg')
 distractor_images = []
-for i in range(1, 8):
+for i in range(1, 9):
     img_path = f"images/{i}.png"
     if os.path.exists(img_path):
         img = visual.ImageStim(win=win, image=img_path, units='deg')
-        distractor_images.append(img)
-    else:
-        img = visual.ImageStim(win=win, units='deg')
         distractor_images.append(img)
 
 # --- Stimuli Setup ---
@@ -189,7 +186,7 @@ instruction_text = visual.TextStim(win=win, text=(
 target_display_text = visual.TextStim(win=win, text="This is the target orientation.\n\nPress SPACE or ENTER to start the practice.", 
                                      height=0.8, pos=(0, 3), wrapWidth=30)
 
-instruction_target_example = visual.ImageStim(win=win, image='images/target.png', units='deg', size=(3, 3), pos=(-2, 0))
+instruction_target_example = visual.ImageStim(win=win, image='images/target.png', units='deg', size=(3, 3), pos=(0, -2))
 
 # instruction text elements
 practice_instruction_text = visual.TextStim(win=win, text="Practice Run (Slightly Slower)\n\nPress SPACE or ENTER to begin.", height=1.0, wrapWidth=30)

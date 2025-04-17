@@ -1,10 +1,6 @@
 # Visual Acuity RSVP Experiment
 
-A collection of psychophysical experiments for measuring visual acuity using Rapid Serial Visual Presentation (RSVP) tasks. These experiments are built using PsychoPy, a Python library for creating psychology experiments.
-
-## Main Experiment: RSVP Letters
-
-The main experiment (`rsvp_experiment_letters.py`) presents rapid streams of stimuli where participants need to identify target letters among number distractors. The experiment varies the size of the stimuli based on LogMAR values to determine visual acuity thresholds.
+The experiment (`rsvp_experiment_letters.py`) presents rapid streams of stimuli where participants need to identify target letters among number distractors. The experiment varies the size of the stimuli based on LogMAR values to determine visual acuity thresholds.
 
 ### Features
 

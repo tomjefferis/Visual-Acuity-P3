@@ -12,13 +12,6 @@ import csv
 from datetime import datetime
 import serial
 
-try:
-    from psychopy import parallel
-    PARALLEL_PORT_AVAILABLE = True
-except (ImportError, ModuleNotFoundError):
-    PARALLEL_PORT_AVAILABLE = False
-    print("WARNING: Parallel port module not available. EEG triggers will be simulated.")
-
 # --- Constants ---
 TARGET_LETTERS = ['C', 'D', 'H', 'K', 'N', 'F', 'R', 'S', 'V', 'Z']
 DISTRACTORS = [str(i) for i in range(1, 10)]
@@ -29,11 +22,25 @@ FIXATION_PRE_STREAM_DUR = 0.700
 FIXATION_POST_STREAM_RESPONSE_DUR = 0.5 
 FIXATION_POST_STREAM_NO_RESPONSE_DUR = 1.000 
 
+# Serial port configuration
+SERIAL_PORT_AVAILABLE = True
+SERIAL_PORT_NAME = '/dev/cu.usbmodem11301'  # Testing for now 
+SERIAL_BAUD_RATE = 115200
+
+# --- Item Duration ---
+ITEM_DURATION_MS = 100  # Target duration in milliseconds
+PRACTICE_SPEED_FACTOR = 1  # Practice speed 0-1
+
+N_TRIALS_PER_SIZE = 16
+N_PRACTICE_TRIALS = 2 
+CONDITIONS_FILE = 'conditions.csv'
+DATA_FOLDER = 'data' # Folder to save data files
+
 # --- Trigger Values ---
 # New trigger codes to avoid conflicts with stimulus-specific triggers
-TRIGGER_STREAM_START = 100    # First item onset
-TRIGGER_TARGET_ONSET = 200    # Target presentation 
-TRIGGER_STREAM_END = 300      # End of stream (post-stream fixation onset)
+TRIGGER_STREAM_START = 101    # First item onset
+TRIGGER_TARGET_ONSET = 102    # Target presentation 
+TRIGGER_STREAM_END = 103      # End of stream (post-stream fixation onset)
 
 # Dictionary mapping stimuli to trigger values
 TRIGGER_MAP = {
@@ -60,22 +67,6 @@ TRIGGER_MAP = {
     'Z': 19
 }
 
-# Serial port configuration for trigger device
-SERIAL_PORT_AVAILABLE = True
-SERIAL_PORT_NAME = 'COM3'  # Default port name, may need adjustment for the system
-SERIAL_BAUD_RATE = 115200  # Default baud rate, adjust based on the device
-
-# --- Item Duration ---
-# Will determine item duration in frames based on measured refresh rate
-ITEM_DURATION_MS = 100  # Target duration in milliseconds
-PRACTICE_SPEED_FACTOR = 1  # Practice speed
-
-N_TRIALS_PER_SIZE = 16
-N_PRACTICE_TRIALS = 2 
-CONDITIONS_FILE = 'conditions.csv'
-DATA_FOLDER = 'data' # Folder to save data files
-
-# --- Initialize serial port ---
 def initialize_serial_port():
     """Initialize the serial port for sending triggers to BioSemi/LabJack."""
     if SERIAL_PORT_AVAILABLE:
@@ -93,18 +84,17 @@ def initialize_serial_port():
             return None
     return None
 
-# --- Send trigger function ---
+
 def send_trigger(port, trigger_value):
     """Send a trigger value to the serial port."""
     if port is not None and SERIAL_PORT_AVAILABLE:
         port.write(bytes([trigger_value]))
         logging.exp(f"TRIGGER: Sent value {trigger_value} to serial port")
-        # No delay needed - just reset immediately
-        port.write(bytes([0]))  # Reset trigger
+        port.write(bytes([0]))  # Reset trigger, not sure if needed
     else:
         logging.exp(f"TRIGGER: Simulated sending value {trigger_value} to serial port")
 
-# --- LogMAR Conversion ---
+
 def logmar_to_degrees(logmar_value):
     """
     Convert LogMAR value to degrees of visual angle.
@@ -125,13 +115,11 @@ def logmar_to_degrees(logmar_value):
     return size_degrees
 
 # --- Experiment Setup ---
-
-# 1. Get Participant Details
 exp_info = {
     'Participant ID': '',
     'Age': '',
     'Gender': ('Male', 'Female', 'Other', 'Prefer not to say'),
-    'Viewing Distance (cm)': 100, 
+    'Viewing Distance (cm)': 57, 
 }
 
 dlg = gui.DlgFromDict(dictionary=exp_info, title='Experiment Setup', order=['Participant ID', 'Age', 'Gender', 'Viewing Distance (cm)'])
@@ -153,6 +141,7 @@ exp = data.ExperimentHandler(name='RSVP_Size', version='1.0',
 logFile = logging.LogFile(filename + '.log', level=logging.EXP)
 logging.console.setLevel(logging.WARNING)
 
+# Monitor configuration
 monitor_name = 'testMonitor'
 mon = monitors.Monitor(monitor_name)
 mon.setDistance(float(exp_info['Viewing Distance (cm)']))
@@ -160,11 +149,11 @@ mon.save()
 
 win = visual.Window(
     size=mon.getSizePix(),
-    fullscr=True,
+    fullscr=False,
     screen=0,
     winType='pyglet',
-    allowGUI=False,
-    allowStencil=False,
+    allowGUI=True,
+    allowStencil=True,
     monitor=mon,
     color='grey',
     colorSpace='rgb',
@@ -173,7 +162,6 @@ win = visual.Window(
     units='deg'
 )
 
-print("Measuring monitor refresh rate... (this may take a few seconds)")
 actual_frame_rate = win.getActualFrameRate(nIdentical=10, nMaxFrames=100, nWarmUpFrames=10, threshold=1)
 if actual_frame_rate is not None:
     exp_info['frameRate'] = actual_frame_rate
@@ -183,7 +171,6 @@ else:
     exp_info['frameRate'] = 60.0
     frameDur = 1.0 / 60.0
     logging.warning("Could not measure frame rate, assuming 60Hz.")
-    print("WARNING: Could not measure frame rate - assuming 60Hz.")
 
 ITEM_DURATION_FRAMES = max(1, round(ITEM_DURATION_MS / (frameDur * 1000)))
 PRACTICE_DURATION_FRAMES = max(1, round((ITEM_DURATION_MS / PRACTICE_SPEED_FACTOR) / (frameDur * 1000)))
@@ -192,97 +179,66 @@ print(f"Practice duration: {PRACTICE_DURATION_FRAMES} frames ({PRACTICE_DURATION
 
 port = initialize_serial_port()
 
-welcome_text = visual.TextStim(win=win, text="Welcome to the experiment!\n\nPress SPACE or ENTER to continue.", height=1.0, wrapWidth=30)
+
+snellen_font = 'Snellen'  # Font for stimuli
+
+
+welcome_text = visual.TextStim(win=win, text="Welcome to the experiment!\n\nPress SPACE or ENTER to continue.", height=1.0)
 instruction_text = visual.TextStim(win=win, text=(
     "Instructions:\n\n"
     "You will see a rapid stream of items in the center of the screen.\n"
     "Each stream contains numbers and ONE letter.\n"
     "Your task is to identify the LETTER.\n\n"
     "First, there will be a short practice.\n\n"
-    "Press SPACE or ENTER to start the practice."), height=0.8, wrapWidth=30)
-practice_instruction_text = visual.TextStim(win=win, text="Practice Run (Slightly Slower)\n\nPress SPACE or ENTER to begin.", height=1.0, wrapWidth=30)
-left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1 (With Response)\n\nPlease cover your RIGHT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=1.0, wrapWidth=30)
-right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1 (With Response)\n\nPlease cover your LEFT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=1.0, wrapWidth=30)
-left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2 (No Response)\n\nKeep your RIGHT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=1.0, wrapWidth=30)
-right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2 (No Response)\n\nKeep your LEFT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=1.0, wrapWidth=30)
-switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Block Complete\n\nNow we'll switch to your RIGHT eye.\n\nPlease take a short break if needed.\n\nPress SPACE or ENTER when you're ready to continue.", height=1.0, wrapWidth=30)
-fixation_cross = visual.TextStim(win=win, text='+', height=2)
-rsvp_stim = visual.TextStim(win=win, text='', height=1.0)
-response_prompt_text = visual.TextStim(win=win, text="Which letter did you see?\n(Type the letter and press ENTER)", height=1.0, wrapWidth=30)
+    "Press SPACE or ENTER to start the practice."), height=0.8)
+practice_instruction_text = visual.TextStim(win=win, text="Practice Run\n\nPress SPACE or ENTER to begin.", height=1.0)
+left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\n\nPlease cover your RIGHT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=1.0)
+right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\n\nPlease cover your LEFT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=1.0)
+left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2\n\nKeep your RIGHT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=1.0)
+right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2\n\nKeep your LEFT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=1.0)
+switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Block Complete\n\nNow we'll switch to your RIGHT eye.\n\nPlease take a short break if needed.\n\nPress SPACE or ENTER when you're ready to continue.", height=1.0)
+fixation_cross = visual.TextStim(win=win, text='+', height=1, font=snellen_font)
+response_prompt_text = visual.TextStim(win=win, text="Which letter did you see?\n(Type the letter and press ENTER)", height=1.0)
 typed_response_text = visual.TextStim(win=win, text="", height=1.5, pos=(0, -3))
-next_trial_text = visual.TextStim(win=win, text="Press SPACE to start the next trial.", height=1.0, wrapWidth=30)
-goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\n\nThe experiment is now complete.", height=1.0, wrapWidth=30)
+next_trial_text = visual.TextStim(win=win, text="Press SPACE to start the next trial.", height=1.0)
+goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\n\nThe experiment is now complete.", height=1.0)
+
+
+rsvp_stim = visual.TextStim(win=win, text='', height=1.0, font=snellen_font)
 
 kb = event.BuilderKeyResponse()
 
-try:
-    trial_conditions = data.importConditions(CONDITIONS_FILE)
-    
-    min_size = float('inf')
-    max_size = float('-inf')
-    
-    for condition in trial_conditions:
-        if 'logmar' in condition:
-            logmar_value = float(condition['logmar'])
-            condition['stimSizeDeg'] = logmar_to_degrees(logmar_value)
-            
-            min_size = min(min_size, condition['stimSizeDeg'])
-            max_size = max(max_size, condition['stimSizeDeg'])
-            
-            print(f"Converting LogMAR {logmar_value} to {condition['stimSizeDeg']} degrees")
-        elif 'stimSizeDeg' not in condition:
-            raise ValueError("Neither 'logmar' nor 'stimSizeDeg' found in conditions file")
-    
-    print(f"Size range: {min_size} to {max_size} degrees of visual angle")
-    
-    trial_conditions = sorted(trial_conditions, key=lambda x: x['stimSizeDeg'], reverse=True)
-    
-    expanded_trial_list = []
-    for condition in trial_conditions:
-        for _ in range(N_TRIALS_PER_SIZE):
-            expanded_trial_list.append(condition.copy())
-    
-    n_sizes = len(trial_conditions)
-    n_total_trials_per_block = n_sizes * N_TRIALS_PER_SIZE
-    print(f"Loaded {n_sizes} stimulus sizes from {CONDITIONS_FILE}.")
-    print(f"Total trials per main block part: {n_total_trials_per_block}")
-except Exception as e:
-    print(f"ERROR: Could not load conditions file '{CONDITIONS_FILE}'!")
-    print(e)
-    if not os.path.exists(CONDITIONS_FILE):
-        print(f"Creating a default '{CONDITIONS_FILE}' with example LogMAR values.")
-        default_logmars = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3]
-        try:
-            with open(CONDITIONS_FILE, 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(['logmar'])
-                for logmar in default_logmars:
-                    writer.writerow([logmar])
-            
-            trial_conditions = data.importConditions(CONDITIONS_FILE)
-            
-            for condition in trial_conditions:
-                logmar_value = float(condition['logmar'])
-                condition['stimSizeDeg'] = logmar_to_degrees(logmar_value)
-                print(f"Converting LogMAR {logmar_value} to {condition['stimSizeDeg']} degrees")
-            
-            trial_conditions = sorted(trial_conditions, key=lambda x: x['stimSizeDeg'], reverse=True)
-            
-            expanded_trial_list = []
-            for condition in trial_conditions:
-                for _ in range(N_TRIALS_PER_SIZE):
-                    expanded_trial_list.append(condition.copy())
-                    
-            n_sizes = len(trial_conditions)
-            n_total_trials_per_block = n_sizes * N_TRIALS_PER_SIZE
-            print(f"Loaded {n_sizes} stimulus sizes from newly created {CONDITIONS_FILE}.")
-            print(f"Total trials per main block part: {n_total_trials_per_block}")
-        except Exception as e2:
-            print(f"ERROR: Failed to create or load default conditions file.")
-            print(e2)
-            core.quit()
-    else:
-        core.quit()
+
+trial_conditions = data.importConditions(CONDITIONS_FILE)
+
+min_size = float('inf')
+max_size = float('-inf')
+
+for condition in trial_conditions:
+    if 'logmar' in condition:
+        logmar_value = float(condition['logmar'])
+        condition['stimSizeDeg'] = logmar_to_degrees(logmar_value)
+        
+        min_size = min(min_size, condition['stimSizeDeg'])
+        max_size = max(max_size, condition['stimSizeDeg'])
+        
+        print(f"Converting LogMAR {logmar_value} to {condition['stimSizeDeg']} degrees")
+    elif 'stimSizeDeg' not in condition:
+        raise ValueError("Neither 'logmar' nor 'stimSizeDeg' found in conditions file")
+
+print(f"Size range: {min_size} to {max_size} degrees of visual angle")
+
+trial_conditions = sorted(trial_conditions, key=lambda x: x['stimSizeDeg'], reverse=True)
+
+expanded_trial_list = []
+for condition in trial_conditions:
+    for _ in range(N_TRIALS_PER_SIZE):
+        expanded_trial_list.append(condition.copy())
+
+n_sizes = len(trial_conditions)
+n_total_trials_per_block = n_sizes * N_TRIALS_PER_SIZE
+print(f"Loaded {n_sizes} stimulus sizes from {CONDITIONS_FILE}.")
+print(f"Total trials per main block part: {n_total_trials_per_block}")
 
 practice_trials_list = [trial_conditions[0]] * N_PRACTICE_TRIALS
 practice_handler = data.TrialHandler(nReps=1, method='random',

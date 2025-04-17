@@ -34,9 +34,9 @@ FIXATION_POST_STREAM_NO_RESPONSE_DUR = 1.000
 
 # --- Trigger Values ---
 # New trigger codes to avoid conflicts with stimulus-specific triggers
-TRIGGER_STREAM_START = 100    # First item onset
-TRIGGER_TARGET_ONSET = 200    # Target presentation 
-TRIGGER_STREAM_END = 300      # End of stream (post-stream fixation onset)
+TRIGGER_STREAM_START = 101    # First item onset
+TRIGGER_TARGET_ONSET = 102    # Target presentation 
+TRIGGER_STREAM_END = 103      # End of stream (post-stream fixation onset)
 
 # Dictionary mapping stimuli to trigger values
 TRIGGER_MAP = {
@@ -460,7 +460,11 @@ except Exception as e:
     contrast_values = ['100', '90', '80', '70', '60', '50', '40', '30', '20', '10', '5', '2.5', '1.25']
     print(f"Using default values: {len(logmar_values)} LogMAR values and {len(contrast_values)} contrast values")
 
+# Custom font file path
+snellen_font = 'Snellen'  # Font file is in the same directory as the script
+
 # --- Text Stimuli ---
+# Using default font for instruction text
 welcome_text = visual.TextStim(win=win, text="Welcome to the experiment!\n\nPress SPACE or ENTER to continue.", height=1.0, wrapWidth=30, color=-1)
 instruction_text = visual.TextStim(win=win, text=(
     "Instructions:\n\n"
@@ -481,11 +485,13 @@ right_eye_contrast_text = visual.TextStim(win=win, text="Right Eye - Contrast Ad
 
 switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Testing Complete\n\nNow we'll switch to your RIGHT eye.\n\nPlease take a short break if needed.\n\nPress SPACE or ENTER when you're ready to continue.", height=1.0, wrapWidth=30, color=-1)
 fixation_cross = visual.TextStim(win=win, text='+', height=2, color=-1)
-rsvp_stim = visual.TextStim(win=win, text='', height=1.0, color=-1)
 response_prompt_text = visual.TextStim(win=win, text="Which letter did you see?\n(Type the letter and press ENTER)", height=1.0, wrapWidth=30, color=-1)
 typed_response_text = visual.TextStim(win=win, text="", height=1.5, pos=(0, -3), color=-1)
 next_trial_text = visual.TextStim(win=win, text="Press SPACE to start the next trial.", height=1.0, wrapWidth=30, color=-1)
 goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\n\nThe experiment is now complete.", height=1.0, wrapWidth=30, color=-1)
+
+# Use Snellen font only for the RSVP stimuli
+rsvp_stim = visual.TextStim(win=win, text='', height=1.0, color=-1, font=snellen_font)
 
 kb = event.BuilderKeyResponse()
 

@@ -22,9 +22,8 @@ The experiment follows this structure:
 ## Installation
 
 ### Requirements
-- Python 3.10 or newer
+- Python 3.10 <- Newer python versions are reported to have compatibility issues
 - PsychoPy 2025.1.0
-- Serial port library (for EEG/trigger functionality)
 
 ### Quick Setup (using Conda)
 

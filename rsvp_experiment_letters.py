@@ -31,7 +31,7 @@ SERIAL_BAUD_RATE = 115200
 ITEM_DURATION_MS = 100  # Target duration in milliseconds
 PRACTICE_SPEED_FACTOR = 1  # Practice speed 0-1
 
-N_TRIALS_PER_SIZE = 16
+N_TRIALS_PER_SIZE = 1
 N_PRACTICE_TRIALS = 2 
 CONDITIONS_FILE = 'conditions.csv'
 DATA_FOLDER = 'data' # Folder to save data files
@@ -110,7 +110,7 @@ def logmar_to_degrees(logmar_value):
         float: Size in degrees of visual angle
     """
     size_arcmin = 5 * (10 ** logmar_value)
-    size_degrees = size_arcmin / 60.0
+    size_degrees = size_arcmin / 30.0 # not sure why, but the font used is 30 arcmin
     
     return size_degrees
 
@@ -119,10 +119,19 @@ exp_info = {
     'Participant ID': '',
     'Age': '',
     'Gender': ('Male', 'Female', 'Other', 'Prefer not to say'),
-    'Viewing Distance (cm)': 57, 
+    'Ethnicity': '',
+    'Handedness': ('Left', 'Right', 'Ambidextrous'),
+    'Vision': ('Normal', 'Corrected', 'Impaired'),
+    'Glasses/Contacts': ('Yes', 'No'),
+    'Eye Dominance': ('Left', 'Right', 'No preference', 'Not sure'),
+    'Hours of Sleep last night': '',
+    'Hours of computer use today': '',
+    'Hours of computer games this week': '',
+    'Viewing Distance (cm)': 300,
+    'Test Mode': ('No', 'Yes'),  # Added test mode option
 }
 
-dlg = gui.DlgFromDict(dictionary=exp_info, title='Experiment Setup', order=['Participant ID', 'Age', 'Gender', 'Viewing Distance (cm)'])
+dlg = gui.DlgFromDict(dictionary=exp_info, title='Experiment Setup', order=['Participant ID', 'Age','Gender', 'Ethnicity', 'Handedness', 'Vision', 'Glasses/Contacts', 'Eye Dominance', 'Hours of Sleep last night', 'Hours of computer use today', 'Hours of computer games this week', 'Viewing Distance (cm)', 'Test Mode'])
 if not dlg.OK:
     core.quit()
 
@@ -145,11 +154,14 @@ logging.console.setLevel(logging.WARNING)
 monitor_name = 'testMonitor'
 mon = monitors.Monitor(monitor_name)
 mon.setDistance(float(exp_info['Viewing Distance (cm)']))
+mon.setWidth(59.8)
+mon.setSizePix((2560, 1440))  # Set to your screen resolution
+print(f"Monitor res: {mon.getSizePix()} px")
 mon.save()
 
 win = visual.Window(
     size=mon.getSizePix(),
-    fullscr=False,
+    fullscr=True,
     screen=0,
     winType='pyglet',
     allowGUI=True,
@@ -162,7 +174,7 @@ win = visual.Window(
     units='deg'
 )
 
-actual_frame_rate = win.getActualFrameRate(nIdentical=10, nMaxFrames=100, nWarmUpFrames=10, threshold=1)
+actual_frame_rate = win.getActualFrameRate(nIdentical=10, nMaxFrames=200, nWarmUpFrames=10, threshold=1)
 if actual_frame_rate is not None:
     exp_info['frameRate'] = actual_frame_rate
     frameDur = 1.0 / round(actual_frame_rate)
@@ -171,6 +183,7 @@ else:
     exp_info['frameRate'] = 60.0
     frameDur = 1.0 / 60.0
     logging.warning("Could not measure frame rate, assuming 60Hz.")
+    print("WARNING: Could not measure frame rate, assuming 60Hz.")
 
 ITEM_DURATION_FRAMES = max(1, round(ITEM_DURATION_MS / (frameDur * 1000)))
 PRACTICE_DURATION_FRAMES = max(1, round((ITEM_DURATION_MS / PRACTICE_SPEED_FACTOR) / (frameDur * 1000)))
@@ -180,31 +193,31 @@ print(f"Practice duration: {PRACTICE_DURATION_FRAMES} frames ({PRACTICE_DURATION
 port = initialize_serial_port()
 
 
-snellen_font = 'Snellen'  # Font for stimuli
+snellen_font = 'Optician Sans'  # Font for stimuli
 
 
-welcome_text = visual.TextStim(win=win, text="Welcome to the experiment!\n\nPress SPACE or ENTER to continue.", height=1.0)
+welcome_text = visual.TextStim(win=win, text="Welcome to the experiment!\n\nPress SPACE or ENTER to continue.", height=0.5, wrapWidth=25)
 instruction_text = visual.TextStim(win=win, text=(
     "Instructions:\n\n"
     "You will see a rapid stream of items in the center of the screen.\n"
     "Each stream contains numbers and ONE letter.\n"
     "Your task is to identify the LETTER.\n\n"
     "First, there will be a short practice.\n\n"
-    "Press SPACE or ENTER to start the practice."), height=0.8)
-practice_instruction_text = visual.TextStim(win=win, text="Practice Run\n\nPress SPACE or ENTER to begin.", height=1.0)
-left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\n\nPlease cover your RIGHT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=1.0)
-right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\n\nPlease cover your LEFT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=1.0)
-left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2\n\nKeep your RIGHT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=1.0)
-right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2\n\nKeep your LEFT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=1.0)
-switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Block Complete\n\nNow we'll switch to your RIGHT eye.\n\nPlease take a short break if needed.\n\nPress SPACE or ENTER when you're ready to continue.", height=1.0)
+    "Press SPACE or ENTER to start the practice."), height=0.5, wrapWidth=25)
+practice_instruction_text = visual.TextStim(win=win, text="Practice Run\n\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=25)
+left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\n\nPlease cover your RIGHT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=0.7, wrapWidth=1)
+right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\n\nPlease cover your LEFT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=0.7, wrapWidth=1)
+left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2\n\nKeep your RIGHT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=0.7, wrapWidth=1)
+right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2\n\nKeep your LEFT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=0.7, wrapWidth=1)
+switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Block Complete\n\nNow we'll switch to your RIGHT eye.\n\nPlease take a short break if needed.\n\nPress SPACE or ENTER when you're ready to continue.", height=0.7, wrapWidth=1)
 fixation_cross = visual.TextStim(win=win, text='+', height=1, font=snellen_font)
-response_prompt_text = visual.TextStim(win=win, text="Which letter did you see?\n(Type the letter and press ENTER)", height=1.0)
+response_prompt_text = visual.TextStim(win=win, text="Which letter did you see?\n(Type the letter and press ENTER)", height=0.7, wrapWidth=20)
 typed_response_text = visual.TextStim(win=win, text="", height=1.5, pos=(0, -3))
-next_trial_text = visual.TextStim(win=win, text="Press SPACE to start the next trial.", height=1.0)
-goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\n\nThe experiment is now complete.", height=1.0)
+next_trial_text = visual.TextStim(win=win, text="Press SPACE to start the next trial.", height=0.7, wrapWidth=20)
+goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\n\nThe experiment is now complete.", height=0.5, wrapWidth=25)
 
 
-rsvp_stim = visual.TextStim(win=win, text='', height=1.0, font=snellen_font)
+rsvp_stim = visual.TextStim(win=win, text='', height=1.0, font=snellen_font) 
 
 kb = event.BuilderKeyResponse()
 
@@ -363,117 +376,178 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
 
     return target_letter, target_position, stream, response, accuracy
 
+def run_font_size_test_mode(win):
+    """
+    Test mode to display a sample letter at each font size.
+    User presses space to advance through sizes, from largest to smallest.
+    No data is saved in this mode.
+    """
+    test_instruction_text = visual.TextStim(win=win, text="Font Size Test Mode\n\nA sample letter will be shown at each size.\nPress SPACE to advance to the next size.\n\nPress SPACE to begin.", height=0.5, wrapWidth=25)
+    show_message(test_instruction_text)
+    
+    test_stim = visual.TextStim(win=win, text='R', height=1.0, font=snellen_font)  # Using 'A' as a standard test letter
+    size_info_text = visual.TextStim(win=win, text='', pos=(0, -3), height=0.5, wrapWidth=1.5)
+    
+    # Sort conditions from largest to smallest size
+    sorted_conditions = sorted(trial_conditions, key=lambda x: x['stimSizeDeg'], reverse=True)
+    
+    for condition in sorted_conditions:
+        stim_size = condition['stimSizeDeg']
+        logmar = condition.get('logmar', 'N/A')
+        
+        # Display the letter at this size
+        test_stim.height = stim_size
+        size_info_text.text = f"Size: {stim_size:.4f} degrees (LogMAR: {logmar})"
+        
+        test_stim.draw()
+        size_info_text.draw()
+        win.flip()
+        
+        # Wait for space bar press to continue to next size
+        event.waitKeys(keyList=['space', 'escape'])
+        
+        # Check if escape was pressed to exit
+        if 'escape' in event.getKeys():
+            break
+    
+    # Test complete message
+    test_complete_text = visual.TextStim(win=win, text="Font size test complete.\n\nPress SPACE to exit.")
+    test_complete_text.draw()
+    win.flip()
+    event.waitKeys(keyList=['space', 'escape'])
+
 show_message(welcome_text)
 
-show_message(instruction_text)
-
-show_message(practice_instruction_text)
-current_trial_global = 0
-for trial_num_practice, practice_trial_data in enumerate(practice_handler):
-    current_trial_global += 1
-    stim_size = practice_trial_data['stimSizeDeg']
+# Check if test mode is enabled
+if exp_info['Test Mode'] == 'Yes':
+    # Run test mode
+    run_font_size_test_mode(win)
     
-    target, pos, stream_items, resp, acc = run_rsvp_trial(win,
+    # Exit after test mode is complete
+    goodbye_text = visual.TextStim(win=win, text="Font size test complete.\n\nThank you!", height=1.0)
+    goodbye_text.draw()
+    win.flip()
+    core.wait(2.0)
+    
+    # Clean up and exit
+    if port is not None and SERIAL_PORT_AVAILABLE:
+        port.write(bytes([0]))
+        logging.exp("Serial port reset at experiment end")
+    
+    win.close()
+    core.quit()
+else:
+    # Continue with normal experiment flow
+    show_message(instruction_text)
+    
+    show_message(practice_instruction_text)
+    current_trial_global = 0
+    for trial_num_practice, practice_trial_data in enumerate(practice_handler):
+        current_trial_global += 1
+        stim_size = practice_trial_data['stimSizeDeg']
+        
+        target, pos, stream_items, resp, acc = run_rsvp_trial(win,
                                              stim_size_deg=stim_size,
                                              item_duration_frames=PRACTICE_DURATION_FRAMES,
                                              require_response=True,
                                              end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR)
 
-    practice_handler.addData('block_type', 'practice')
-    practice_handler.addData('trial_num_block', trial_num_practice + 1)
-    practice_handler.addData('trial_num_global', current_trial_global)
-    practice_handler.addData('target_letter', target)
-    practice_handler.addData('target_position', pos)
-    practice_handler.addData('stim_size_deg', stim_size)
-    practice_handler.addData('response', resp)
-    practice_handler.addData('accuracy', acc)
-    exp.nextEntry()
-
-    if trial_num_practice < N_PRACTICE_TRIALS - 1:
-        show_message(next_trial_text, wait_keys=['space'])
-
-for eye in ['left', 'right']:
-
-    if eye == 'left':
-        show_message(left_eye_instruction_text)
-        block_prefix = 'left_eye'
-    else:
-        show_message(right_eye_instruction_text)
-        block_prefix = 'right_eye'
-
-    trials_response = data.TrialHandler(nReps=1, method='sequential',
-                                        originPath=-1,
-                                        trialList=expanded_trial_list,
-                                        name='trials_response')
-    
-    trials_no_response = data.TrialHandler(nReps=1, method='sequential',
-                                          originPath=-1,
-                                          trialList=expanded_trial_list,
-                                          name='trials_no_response')
-
-    print(f"\n--- Starting {eye.capitalize()} Eye Block - Part 1 (Response) ---")
-    exp.addLoop(trials_response)
-    for trial_num_block, trial_data in enumerate(trials_response):
-        current_trial_global += 1
-        stim_size = trial_data['stimSizeDeg']
-
-        target, pos, stream_items, resp, acc = run_rsvp_trial(
-            win,
-            stim_size_deg=stim_size,
-            item_duration_frames=ITEM_DURATION_FRAMES,
-            require_response=True,
-            end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR
-        )
-
-        trials_response.addData('block_type', f'{block_prefix}_response')
-        trials_response.addData('trial_num_block', trial_num_block + 1)
-        trials_response.addData('trial_num_global', current_trial_global)
-        trials_response.addData('target_letter', target)
-        trials_response.addData('target_position', pos)
-        trials_response.addData('response', resp)
-        trials_response.addData('accuracy', acc)
+        practice_handler.addData('block_type', 'practice')
+        practice_handler.addData('trial_num_block', trial_num_practice + 1)
+        practice_handler.addData('trial_num_global', current_trial_global)
+        practice_handler.addData('target_letter', target)
+        practice_handler.addData('target_position', pos)
+        practice_handler.addData('stim_size_deg', stim_size)
+        practice_handler.addData('response', resp)
+        practice_handler.addData('accuracy', acc)
         exp.nextEntry()
 
-        if trial_num_block < n_total_trials_per_block - 1:
+        if trial_num_practice < N_PRACTICE_TRIALS - 1:
             show_message(next_trial_text, wait_keys=['space'])
+
+    for eye in ['left', 'right']:
+
+        if eye == 'left':
+            show_message(left_eye_instruction_text)
+            block_prefix = 'left_eye'
         else:
-            core.wait(1.0)
+            show_message(right_eye_instruction_text)
+            block_prefix = 'right_eye'
 
-    if eye == 'left':
-        show_message(left_eye_no_response_text)
-    else:
-        show_message(right_eye_no_response_text)
+        trials_response = data.TrialHandler(nReps=1, method='sequential',
+                                            originPath=-1,
+                                            trialList=expanded_trial_list,
+                                            name='trials_response')
+        
+        trials_no_response = data.TrialHandler(nReps=1, method='sequential',
+                                              originPath=-1,
+                                              trialList=expanded_trial_list,
+                                              name='trials_no_response')
 
-    print(f"\n--- Starting {eye.capitalize()} Eye Block - Part 2 (No Response) ---")
-    exp.addLoop(trials_no_response)
-    for trial_num_block, trial_data in enumerate(trials_no_response):
-        current_trial_global += 1
-        stim_size = trial_data['stimSizeDeg']
+        print(f"\n--- Starting {eye.capitalize()} Eye Block - Part 1 (Response) ---")
+        exp.addLoop(trials_response)
+        for trial_num_block, trial_data in enumerate(trials_response):
+            current_trial_global += 1
+            stim_size = trial_data['stimSizeDeg']
 
-        target, pos, stream_items, resp, acc = run_rsvp_trial(
-            win,
-            stim_size_deg=stim_size,
-            item_duration_frames=ITEM_DURATION_FRAMES,
-            require_response=False,
-            end_fix_duration=FIXATION_POST_STREAM_NO_RESPONSE_DUR
-        )
+            target, pos, stream_items, resp, acc = run_rsvp_trial(
+                win,
+                stim_size_deg=stim_size,
+                item_duration_frames=ITEM_DURATION_FRAMES,
+                require_response=True,
+                end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR
+            )
 
-        trials_no_response.addData('block_type', f'{block_prefix}_no_response')
-        trials_no_response.addData('trial_num_block', trial_num_block + 1)
-        trials_no_response.addData('trial_num_global', current_trial_global)
-        trials_no_response.addData('target_letter', target)
-        trials_no_response.addData('target_position', pos)
-        trials_no_response.addData('response', resp)
-        trials_no_response.addData('accuracy', acc)
-        exp.nextEntry()
+            trials_response.addData('block_type', f'{block_prefix}_response')
+            trials_response.addData('trial_num_block', trial_num_block + 1)
+            trials_response.addData('trial_num_global', current_trial_global)
+            trials_response.addData('target_letter', target)
+            trials_response.addData('target_position', pos)
+            trials_response.addData('response', resp)
+            trials_response.addData('accuracy', acc)
+            exp.nextEntry()
 
-        is_last_overall_trial = (eye == 'right' and trial_num_block == n_total_trials_per_block - 1)
-        if not is_last_overall_trial:
-             show_message(next_trial_text, wait_keys=['space'])
+            if trial_num_block < n_total_trials_per_block - 1:
+                show_message(next_trial_text, wait_keys=['space'])
+            else:
+                core.wait(1.0)
 
-    if eye == 'left':
-        show_message(switch_to_right_eye_text)
+        if eye == 'left':
+            show_message(left_eye_no_response_text)
+        else:
+            show_message(right_eye_no_response_text)
 
+        print(f"\n--- Starting {eye.capitalize()} Eye Block - Part 2 (No Response) ---")
+        exp.addLoop(trials_no_response)
+        for trial_num_block, trial_data in enumerate(trials_no_response):
+            current_trial_global += 1
+            stim_size = trial_data['stimSizeDeg']
+
+            target, pos, stream_items, resp, acc = run_rsvp_trial(
+                win,
+                stim_size_deg=stim_size,
+                item_duration_frames=ITEM_DURATION_FRAMES,
+                require_response=False,
+                end_fix_duration=FIXATION_POST_STREAM_NO_RESPONSE_DUR
+            )
+
+            trials_no_response.addData('block_type', f'{block_prefix}_no_response')
+            trials_no_response.addData('trial_num_block', trial_num_block + 1)
+            trials_no_response.addData('trial_num_global', current_trial_global)
+            trials_no_response.addData('target_letter', target)
+            trials_no_response.addData('target_position', pos)
+            trials_no_response.addData('response', resp)
+            trials_no_response.addData('accuracy', acc)
+            exp.nextEntry()
+
+            is_last_overall_trial = (eye == 'right' and trial_num_block == n_total_trials_per_block - 1)
+            if not is_last_overall_trial:
+                 show_message(next_trial_text, wait_keys=['space'])
+
+        if eye == 'left':
+            show_message(switch_to_right_eye_text)
+
+# --- End of Experiment ---
 goodbye_text.draw()
 win.flip()
 core.wait(3.0)

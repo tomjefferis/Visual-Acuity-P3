@@ -21,6 +21,7 @@ TARGET_POS_MAX = 8
 FIXATION_PRE_STREAM_DUR = 0.700 
 FIXATION_POST_STREAM_RESPONSE_DUR = 0.5 
 FIXATION_POST_STREAM_NO_RESPONSE_DUR = 1.000 
+FIXATION_SYMBOLS = ['+', '=']  # Symbols used for the end of stream
 
 # Serial port configuration
 SERIAL_PORT_AVAILABLE = True
@@ -28,8 +29,8 @@ SERIAL_PORT_NAME = '/dev/cu.usbmodem11301'  # Testing for now
 SERIAL_BAUD_RATE = 115200
 
 # --- Item Duration ---
-ITEM_DURATION_MS = 100  # Target duration in milliseconds
-PRACTICE_SPEED_FACTOR = 1  # Practice speed 0-1
+ITEM_DURATION_MS = 120  # Target duration in milliseconds
+PRACTICE_SPEED_FACTOR = 0.75  # Practice speed 0-1
 
 N_TRIALS_PER_SIZE = 1
 N_PRACTICE_TRIALS = 2 
@@ -37,7 +38,6 @@ CONDITIONS_FILE = 'conditions.csv'
 DATA_FOLDER = 'data' # Folder to save data files
 
 # --- Trigger Values ---
-# New trigger codes to avoid conflicts with stimulus-specific triggers
 TRIGGER_STREAM_START = 101    # First item onset
 TRIGGER_TARGET_ONSET = 102    # Target presentation 
 TRIGGER_STREAM_END = 103      # End of stream (post-stream fixation onset)
@@ -196,25 +196,30 @@ port = initialize_serial_port()
 snellen_font = 'Optician Sans'  # Font for stimuli
 
 
-welcome_text = visual.TextStim(win=win, text="Welcome to the experiment!\n\nPress SPACE or ENTER to continue.", height=0.5, wrapWidth=25)
+welcome_text = visual.TextStim(win=win, text="Welcome to the experiment!\nPress SPACE or ENTER to continue.", height=0.5, wrapWidth=25)
 instruction_text = visual.TextStim(win=win, text=(
-    "Instructions:\n\n"
+    "Instructions:\n"
     "You will see a rapid stream of items in the center of the screen.\n"
     "Each stream contains numbers and ONE letter.\n"
-    "Your task is to identify the LETTER.\n\n"
-    "First, there will be a short practice.\n\n"
-    "Press SPACE or ENTER to start the practice."), height=0.5, wrapWidth=25)
-practice_instruction_text = visual.TextStim(win=win, text="Practice Run\n\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=25)
-left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\n\nPlease cover your RIGHT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=0.7, wrapWidth=1)
-right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\n\nPlease cover your LEFT eye now.\n\nYou will need to identify the letter in each trial.\n\nPress SPACE or ENTER to begin.", height=0.7, wrapWidth=1)
-left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2\n\nKeep your RIGHT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=0.7, wrapWidth=1)
-right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2\n\nKeep your LEFT eye covered.\n\nIn this part, you do NOT need to respond.\nSimply watch the streams carefully.\n\nPress SPACE or ENTER to begin.", height=0.7, wrapWidth=1)
-switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Block Complete\n\nNow we'll switch to your RIGHT eye.\n\nPlease take a short break if needed.\n\nPress SPACE or ENTER when you're ready to continue.", height=0.7, wrapWidth=1)
+    "Your tasks are to:\n"
+    "1) Identify the LETTER in the stream.\n"
+    "2) Identify the symbol at the end of the stream (+ or =).\n"
+    "First, there will be a short practice.\n"
+    "Press SPACE or ENTER to start the practice."), height=0.4, wrapWidth=20)
+practice_instruction_text = visual.TextStim(win=win, text="Practice Run\nPress SPACE or ENTER to begin.", height=0.4, wrapWidth=25)
+left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\nPlease cover your RIGHT eye now.\nYou will need to identify: 1) the letter in each trial and 2) the end symbol (+ or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
+right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\nPlease cover your LEFT eye now.\nYou will need to identify: 1) the letter in each trial and 2) the end symbol (+ or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
+left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2\nKeep your RIGHT eye covered.\nIn this part, you do NOT need to identify the letter, but you still need to identify the end symbol (+ or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
+right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2\nKeep your LEFT eye covered.\nIn this part, you do NOT need to identify the letter, but you still need to identify the end symbol (+ or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
+switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Block Complete\nNow we\\'ll switch to your RIGHT eye.\nPlease take a short break if needed.\nPress SPACE or ENTER when you\\'re ready to continue.", height=0.5, wrapWidth=20)
 fixation_cross = visual.TextStim(win=win, text='+', height=1, font=snellen_font)
-response_prompt_text = visual.TextStim(win=win, text="Which letter did you see?\n(Type the letter and press ENTER)", height=0.7, wrapWidth=20)
-typed_response_text = visual.TextStim(win=win, text="", height=1.5, pos=(0, -3))
-next_trial_text = visual.TextStim(win=win, text="Press SPACE to start the next trial.", height=0.7, wrapWidth=20)
-goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\n\nThe experiment is now complete.", height=0.5, wrapWidth=25)
+equal_sign = visual.TextStim(win=win, text='=', height=1, font=snellen_font) # New stimulus for equals sign
+response_prompt_text = visual.TextStim(win=win, text="Which letter did you see?\n(Type the letter and press ENTER)", height=0.5, wrapWidth=20)
+typed_response_text = visual.TextStim(win=win, text="", height=1, pos=(0, -2))
+symbol_prompt_text = visual.TextStim(win=win, text="What symbol was shown at the end?\n(+ or =)\n(Type + or = and press ENTER)", height=0.5, wrapWidth=20) # New prompt for symbol
+typed_symbol_text = visual.TextStim(win=win, text="", height=1.5, pos=(0, -2)) # New text for typed symbol
+next_trial_text = visual.TextStim(win=win, text="Press SPACE to start the next trial.", height=0.5, wrapWidth=20)
+goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\nThe experiment is now complete.", height=0.5, wrapWidth=25)
 
 
 rsvp_stim = visual.TextStim(win=win, text='', height=1.0, font=snellen_font) 
@@ -277,49 +282,118 @@ def show_message(text_stim, wait_keys=['space', 'return', 'enter']):
     event.waitKeys(keyList=wait_keys)
     win.flip()
 
-def collect_response(prompt_stim, typed_stim):
-    """Collects a typed response until Enter is pressed."""
+def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
+    """Collects a typed response until Enter is pressed.
+    Handles mapping of PsychoPy key names to characters for letters, '+', and '='.
+    Correctly interprets Shift + '=' as '+'.
+    """
     response_str = ""
     typed_stim.text = ""
+    # Initial prompt display is now done after setting up listeners
+
+    # PsychoPy key names and their corresponding characters (for direct mapping)
+    # The 'equal' key is handled specially below to check for the Shift modifier.
+    key_name_to_char_map = {
+        'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F', 'g': 'G',
+        'h': 'H', 'i': 'I', 'j': 'J', 'k': 'K', 'l': 'L', 'm': 'M', 'n': 'N',
+        'o': 'O', 'p': 'P', 'q': 'Q', 'r': 'R', 's': 'S', 't': 'T', 'u': 'U',
+        'v': 'V', 'w': 'W', 'x': 'X', 'y': 'Y', 'z': 'Z',
+        'plus': '+',        # For a dedicated '+' key (e.g., on numpad or some keyboards)
+        'kp_add': '+',      # Numpad '+'
+        'kp_equal': '=',    # Numpad '=' (if it exists and is used)
+    }
+
+    active_allowed_chars = []
+    # Determine active_allowed_chars based on the prompt type
+    if prompt_stim == symbol_prompt_text: # Symbol prompt
+        # expected_chars_list is ['+', '='] when called for symbol prompt
+        active_allowed_chars = [char.upper() for char in expected_chars_list if char in ['+', '=']] if expected_chars_list else ['+', '=']
+    elif prompt_stim == response_prompt_text: # Letter prompt
+        # expected_chars_list is None when called for letter prompt
+        active_allowed_chars = [chr(ord('A') + i) for i in range(26)] # Default to all uppercase letters
+        if expected_chars_list: # This part is not currently used but allows for future restriction
+            # active_allowed_chars = [char.upper() for char in expected_chars_list if char.isalpha()]
+            pass
+
+
+    # Determine which base key names to listen for
+    base_listen_keys = ['backspace', 'return', 'enter', 'escape']
+    # Check if any uppercase letter A-Z is in active_allowed_chars
+    if any(chr(ord('A') + i) in active_allowed_chars for i in range(26)):
+        for i in range(26):
+            base_listen_keys.append(chr(ord('a') + i)) # Listen for 'a', 'b', ...
+
+    if '+' in active_allowed_chars or '=' in active_allowed_chars:
+        base_listen_keys.extend(['equal', 'plus', 'kp_add', 'kp_equal'])
+
+    listen_for_key_names = list(set(base_listen_keys)) # Ensure unique key names
+
+    # Initial display of prompt
     prompt_stim.draw()
-    typed_stim.draw()
+    typed_stim.draw() # Initially empty
     win.flip()
 
-    while True:
-        keys = event.getKeys(keyList=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-                                       'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-                                       'backspace', 'return', 'enter', 'escape'])
-        if not keys:
+    break_loop = False
+    while not break_loop:
+        # Get all key events in this frame, with modifiers
+        keys_with_mods = event.getKeys(keyList=listen_for_key_names, modifiers=True)
+
+        if not keys_with_mods: 
             prompt_stim.draw()
             typed_stim.draw()
             win.flip()
-            continue
+            core.wait(0.001) 
+            continue 
 
-        key = keys[0]
+        # Process each key event from this frame
+        for key_name_pressed, mods in keys_with_mods:
+            if key_name_pressed in ['escape']:
+                print("User aborted experiment.")
+                core.quit() 
+                return ""  # Should not be reached if core.quit() works
+            
+            elif key_name_pressed in ['return', 'enter']:
+                if response_str: # Only accept if there's a response
+                    break_loop = True # Signal to break outer while-loop
+                    break # Exit this inner for-loop (over keys_with_mods)
+                else:
+                    # No response yet, ignore enter, continue processing other keys in this frame if any
+                    continue 
+            
+            elif key_name_pressed == 'backspace':
+                response_str = response_str[:-1]
+                # typed_stim.text will be updated before the flip
+            
+            else: # Character input keys
+                char_to_add = None
+                is_shift_pressed = mods.get('shift', False)
 
-        if key in ['escape']:
-            print("User aborted experiment.")
-            core.quit()
-        elif key in ['return', 'enter']:
-            if response_str:
-                break
-        elif key == 'backspace':
-            response_str = response_str[:-1]
-            typed_stim.text = response_str.upper()
-        else:
-            response_str += key
-            typed_stim.text = response_str.upper()
-
+                if key_name_pressed == 'equal': # Handle '=' and Shift+'=' -> '+'
+                    char_to_add = '+' if is_shift_pressed else '='
+                elif key_name_pressed in key_name_to_char_map: # For letters and other mapped keys ('plus', 'kp_add', 'kp_equal')
+                    char_to_add = key_name_to_char_map[key_name_pressed]
+                
+                if char_to_add and char_to_add in active_allowed_chars:
+                    if prompt_stim == symbol_prompt_text:
+                        # For symbol prompt, overwrite to ensure only one symbol
+                        response_str = char_to_add
+                    elif prompt_stim == response_prompt_text: # For letter prompt, append
+                        response_str += char_to_add
+        
+        # After processing all keys for this frame, update display
+        typed_stim.text = response_str
         prompt_stim.draw()
         typed_stim.draw()
         win.flip()
 
-    win.flip()
-    return response_str.upper()
+    # break_loop is true, meaning 'return'/'enter' was pressed with a valid response
+    win.flip() # Clear the prompt/response from screen
+    return response_str
 
 def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=True, end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR):
     target_letter = random.choice(TARGET_LETTERS)
     target_position = random.randint(TARGET_POS_MIN, TARGET_POS_MAX)
+    end_symbol = random.choice(FIXATION_SYMBOLS)  # Randomly choose + or =
 
     stream = []
     for i in range(N_STREAM_ITEMS):
@@ -331,10 +405,12 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
                 distractor = random.choice(DISTRACTORS)
             stream.append(distractor)
 
+    # Display fixation cross before the stream
     fixation_cross.draw()
     win.flip()
     core.wait(FIXATION_PRE_STREAM_DUR)
 
+    # RSVP stream presentation
     for i, item in enumerate(stream):
         rsvp_stim.setText(item)
         rsvp_stim.height = stim_size_deg
@@ -356,25 +432,36 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
             rsvp_stim.draw()
             win.flip()
 
-    fixation_cross.draw()
+    # Display the end symbol (+ or =)
+    if end_symbol == '+':
+        fixation_cross.draw()
+    else:
+        equal_sign.draw()
     
     send_trigger(port, TRIGGER_STREAM_END)
-    logging.exp("RSVP Stream End - Start of end fixation")
+    logging.exp(f"RSVP Stream End - End symbol: {end_symbol}") # Log the chosen end symbol
     
     win.flip()
-    core.wait(end_fix_duration)
-    win.flip()
+    core.wait(end_fix_duration) # Display the end symbol for the specified duration
+    win.flip() # Clear the screen
 
-    response = None
-    accuracy = None
+    letter_response = None
+    letter_accuracy = None
+    symbol_response = None
+    symbol_accuracy = None
+
     if require_response:
-        response = collect_response(response_prompt_text, typed_response_text)
-        accuracy = 1 if response == target_letter else 0
+        letter_response = collect_response(response_prompt_text, typed_response_text, expected_chars_list=None) # Defaults to A-Z
+        letter_accuracy = 1 if letter_response == target_letter else 0
     else:
-        response = 'N/A'
-        accuracy = 'N/A'
+        letter_response = 'N/A'
+        letter_accuracy = 'N/A'
+    
+    # Always collect symbol response
+    symbol_response = collect_response(symbol_prompt_text, typed_symbol_text, expected_chars_list=['+', '='])
+    symbol_accuracy = 1 if symbol_response == end_symbol else 0
 
-    return target_letter, target_position, stream, response, accuracy
+    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy
 
 def run_font_size_test_mode(win):
     """
@@ -382,11 +469,11 @@ def run_font_size_test_mode(win):
     User presses space to advance through sizes, from largest to smallest.
     No data is saved in this mode.
     """
-    test_instruction_text = visual.TextStim(win=win, text="Font Size Test Mode\n\nA sample letter will be shown at each size.\nPress SPACE to advance to the next size.\n\nPress SPACE to begin.", height=0.5, wrapWidth=25)
+    test_instruction_text = visual.TextStim(win=win, text="Font Size Test Mode\nA sample letter will be shown at each size.\nPress SPACE to advance to the next size.\nPress SPACE to begin.", height=0.5, wrapWidth=25)
     show_message(test_instruction_text)
     
     test_stim = visual.TextStim(win=win, text='R', height=1.0, font=snellen_font)  # Using 'A' as a standard test letter
-    size_info_text = visual.TextStim(win=win, text='', pos=(0, -3), height=0.5, wrapWidth=1.5)
+    size_info_text = visual.TextStim(win=win, text='', pos=(0, -3), height=0.5, wrapWidth=20.5)
     
     # Sort conditions from largest to smallest size
     sorted_conditions = sorted(trial_conditions, key=lambda x: x['stimSizeDeg'], reverse=True)
@@ -411,7 +498,7 @@ def run_font_size_test_mode(win):
             break
     
     # Test complete message
-    test_complete_text = visual.TextStim(win=win, text="Font size test complete.\n\nPress SPACE to exit.")
+    test_complete_text = visual.TextStim(win=win, text="Font size test complete.\nPress SPACE to exit.")
     test_complete_text.draw()
     win.flip()
     event.waitKeys(keyList=['space', 'escape'])
@@ -424,7 +511,7 @@ if exp_info['Test Mode'] == 'Yes':
     run_font_size_test_mode(win)
     
     # Exit after test mode is complete
-    goodbye_text = visual.TextStim(win=win, text="Font size test complete.\n\nThank you!", height=1.0)
+    goodbye_text = visual.TextStim(win=win, text="Font size test complete.\nThank you!", height=1.0)
     goodbye_text.draw()
     win.flip()
     core.wait(2.0)
@@ -446,7 +533,7 @@ else:
         current_trial_global += 1
         stim_size = practice_trial_data['stimSizeDeg']
         
-        target, pos, stream_items, resp, acc = run_rsvp_trial(win,
+        target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc = run_rsvp_trial(win,
                                              stim_size_deg=stim_size,
                                              item_duration_frames=PRACTICE_DURATION_FRAMES,
                                              require_response=True,
@@ -458,8 +545,11 @@ else:
         practice_handler.addData('target_letter', target)
         practice_handler.addData('target_position', pos)
         practice_handler.addData('stim_size_deg', stim_size)
-        practice_handler.addData('response', resp)
-        practice_handler.addData('accuracy', acc)
+        practice_handler.addData('letter_response', l_resp)
+        practice_handler.addData('letter_accuracy', l_acc)
+        practice_handler.addData('end_symbol', e_sym)
+        practice_handler.addData('symbol_response', s_resp)
+        practice_handler.addData('symbol_accuracy', s_acc)
         exp.nextEntry()
 
         if trial_num_practice < N_PRACTICE_TRIALS - 1:
@@ -490,7 +580,7 @@ else:
             current_trial_global += 1
             stim_size = trial_data['stimSizeDeg']
 
-            target, pos, stream_items, resp, acc = run_rsvp_trial(
+            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc = run_rsvp_trial(
                 win,
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,
@@ -503,8 +593,12 @@ else:
             trials_response.addData('trial_num_global', current_trial_global)
             trials_response.addData('target_letter', target)
             trials_response.addData('target_position', pos)
-            trials_response.addData('response', resp)
-            trials_response.addData('accuracy', acc)
+            trials_response.addData('stim_size_deg', stim_size) # Added missing stim_size_deg
+            trials_response.addData('letter_response', l_resp)
+            trials_response.addData('letter_accuracy', l_acc)
+            trials_response.addData('end_symbol', e_sym)
+            trials_response.addData('symbol_response', s_resp)
+            trials_response.addData('symbol_accuracy', s_acc)
             exp.nextEntry()
 
             if trial_num_block < n_total_trials_per_block - 1:
@@ -523,11 +617,11 @@ else:
             current_trial_global += 1
             stim_size = trial_data['stimSizeDeg']
 
-            target, pos, stream_items, resp, acc = run_rsvp_trial(
+            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc = run_rsvp_trial(
                 win,
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,
-                require_response=False,
+                require_response=False, # Letter response not required
                 end_fix_duration=FIXATION_POST_STREAM_NO_RESPONSE_DUR
             )
 
@@ -536,13 +630,18 @@ else:
             trials_no_response.addData('trial_num_global', current_trial_global)
             trials_no_response.addData('target_letter', target)
             trials_no_response.addData('target_position', pos)
-            trials_no_response.addData('response', resp)
-            trials_no_response.addData('accuracy', acc)
+            trials_no_response.addData('stim_size_deg', stim_size) # Added missing stim_size_deg
+            trials_no_response.addData('letter_response', l_resp) # Will be 'N/A'
+            trials_no_response.addData('letter_accuracy', l_acc) # Will be 'N/A'
+            trials_no_response.addData('end_symbol', e_sym)
+            trials_no_response.addData('symbol_response', s_resp)
+            trials_no_response.addData('symbol_accuracy', s_acc)
             exp.nextEntry()
 
-            is_last_overall_trial = (eye == 'right' and trial_num_block == n_total_trials_per_block - 1)
-            if not is_last_overall_trial:
-                 show_message(next_trial_text, wait_keys=['space'])
+            if trial_num_block < n_total_trials_per_block - 1:
+                show_message(next_trial_text, wait_keys=['space'])
+            else:
+                core.wait(1.0) # Wait a bit after the last trial of the no-response block
 
         if eye == 'left':
             show_message(switch_to_right_eye_text)

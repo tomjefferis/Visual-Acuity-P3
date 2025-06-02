@@ -29,7 +29,7 @@ The experiment follows this structure:
 
 1. Clone this repository to your local machine:
    ```
-   git clone https://github.com/yourusername/Visual-Acuity.git
+   git clone https://github.com/tomjefferis/Visual-Acuity.git
    cd Visual-Acuity
    ```
 

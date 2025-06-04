@@ -6,7 +6,8 @@ Runs separate blocks for left and right eyes.
 """
 
 from psychopy import core, visual, gui, data, event, logging, monitors
-from psychopy.hardware.labjacks import U3
+# Replace psychopy.hardware.labjacks import with our custom implementation
+import labjackU3
 import random
 import os
 import csv
@@ -65,21 +66,21 @@ TRIGGER_MAP = {
 def initialize_labjack():
     """Initialize the LabJack U3 for sending triggers."""
     try:
-        ljack = U3()
-        ljack.configDigital()  # Configure digital I/O
+        # Configure the LabJack using our custom implementation
+        labjackU3.configure()
         print("LabJack U3 initialized successfully")
-        return ljack
+        return True  # Return True to indicate success instead of the device object
     except Exception as e:
         print(f"ERROR: Failed to initialize LabJack U3: {e}")
-        raise
+        return None
 
 
 def send_trigger(ljack, trigger_value):
     """Send a trigger value to the LabJack U3."""
     if ljack is not None:
-        ljack.setData(trigger_value)
+        # Use our custom labjackU3 module to send the trigger
+        labjackU3.trigger(trigger_value)
         logging.exp(f"TRIGGER: Sent value {trigger_value} to LabJack U3")
-        ljack.setData(0)  # Reset trigger
     else:
         logging.exp(f"TRIGGER: LabJack not available, cannot send value {trigger_value}")
 
@@ -143,8 +144,8 @@ logging.console.setLevel(logging.WARNING)
 monitor_name = 'testMonitor'
 mon = monitors.Monitor(monitor_name)
 mon.setDistance(float(exp_info['Viewing Distance (cm)']))
-mon.setWidth(59.8)
-mon.setSizePix((2560, 1440))  # Set to your screen resolution
+mon.setWidth(121)
+mon.setSizePix((1920,1080))  # Set to your screen resolution
 print(f"Monitor res: {mon.getSizePix()} px")
 mon.save()
 
@@ -506,7 +507,7 @@ if exp_info['Test Mode'] == 'Yes':
     core.wait(2.0)
       # Clean up and exit
     if ljack is not None:
-        ljack.setData(0)
+        labjackU3.trigger(0)  # Reset the trigger to 0
         logging.exp("LabJack reset at experiment end")
     
     win.close()
@@ -644,7 +645,7 @@ exp.saveAsPickle(filename + '.psydat')
 logging.flush()
 
 if ljack is not None:
-    ljack.setData(0)
+    labjackU3.trigger(0)  # Reset the trigger to 0
     logging.exp("LabJack reset at experiment end")
 
 win.close()

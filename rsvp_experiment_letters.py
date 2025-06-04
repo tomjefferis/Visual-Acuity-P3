@@ -16,8 +16,8 @@ import serial
 TARGET_LETTERS = ['C', 'D', 'H', 'K', 'N', 'F', 'R', 'S', 'V', 'Z']
 DISTRACTORS = [str(i) for i in range(1, 10)]
 N_STREAM_ITEMS = 16
-TARGET_POS_MIN = 3 
-TARGET_POS_MAX = 8 
+TARGET_POS_MIN = 6 
+TARGET_POS_MAX = 9 
 FIXATION_PRE_STREAM_DUR = 0.700 
 FIXATION_POST_STREAM_RESPONSE_DUR = 0.5 
 FIXATION_POST_STREAM_NO_RESPONSE_DUR = 1.000 
@@ -29,7 +29,7 @@ SERIAL_PORT_NAME = '/dev/cu.usbmodem11301'  # Testing for now
 SERIAL_BAUD_RATE = 115200
 
 # --- Item Duration ---
-ITEM_DURATION_MS = 120  # Target duration in milliseconds
+ITEM_DURATION_MS = 110  # Target duration in milliseconds
 PRACTICE_SPEED_FACTOR = 0.75  # Practice speed 0-1
 
 N_TRIALS_PER_SIZE = 1
@@ -154,8 +154,8 @@ logging.console.setLevel(logging.WARNING)
 monitor_name = 'testMonitor'
 mon = monitors.Monitor(monitor_name)
 mon.setDistance(float(exp_info['Viewing Distance (cm)']))
-mon.setWidth(59.8)
-mon.setSizePix((2560, 1440))  # Set to your screen resolution
+mon.setWidth(121)
+mon.setSizePix((3840, 2160))  # Set to your screen resolution
 print(f"Monitor res: {mon.getSizePix()} px")
 mon.save()
 

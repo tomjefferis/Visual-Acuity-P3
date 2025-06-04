@@ -402,16 +402,17 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
     win.flip() # Clear the prompt/response from screen
     return response_str
 
-def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=True, end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR):
+def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=True, end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR, trial_num=0):
     # Create a seeded random number generator for this trial
-    # We use the participant ID and trial parameters to create a unique but reproducible seed
-    seed_value = int(hash(str(exp_info['Participant ID']) + str(stim_size_deg) + str(require_response)) % 2**32)
+    # We use only the trial parameters and trial number to create a reproducible seed
+    # Participant ID is excluded to ensure consistency across all participants
+    seed_value = int(hash(str(stim_size_deg) + str(require_response) + str(trial_num)) % 2**32)
     rng = np.random.RandomState(seed_value)
     
     # Use the seeded RNG for all "random" choices
     target_letter = TARGET_LETTERS[rng.randint(0, len(TARGET_LETTERS))]
     target_position = rng.randint(TARGET_POS_MIN, TARGET_POS_MAX + 1)  # +1 because randint upper bound is exclusive
-    end_symbol = FIXATION_SYMBOLS[rng.randint(0, len(FIXATION_SYMBOLS))]  # Random + or =
+    end_symbol = FIXATION_SYMBOLS[rng.randint(0, len(FIXATION_SYMBOLS))]  # Random - or =
 
     stream = []
     for i in range(N_STREAM_ITEMS):
@@ -573,7 +574,8 @@ else:
                                              stim_size_deg=stim_size,
                                              item_duration_frames=PRACTICE_DURATION_FRAMES,
                                              require_response=True,
-                                             end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR)
+                                             end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR,
+                                             trial_num=trial_num_practice)
 
         practice_handler.addData('block_type', 'practice')
         practice_handler.addData('trial_num_block', trial_num_practice + 1)
@@ -621,7 +623,8 @@ else:
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,
                 require_response=True,
-                end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR
+                end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR,
+                trial_num=trial_num_block + 1
             )
 
             trials_response.addData('block_type', f'{block_prefix}_response')
@@ -658,7 +661,8 @@ else:
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,
                 require_response=False, # Letter response not required
-                end_fix_duration=FIXATION_POST_STREAM_NO_RESPONSE_DUR
+                end_fix_duration=FIXATION_POST_STREAM_NO_RESPONSE_DUR,
+                trial_num=trial_num_block + 1
             )
 
             trials_no_response.addData('block_type', f'{block_prefix}_no_response')

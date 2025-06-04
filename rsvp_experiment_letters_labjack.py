@@ -9,6 +9,7 @@ Includes a photodiode patch for precise timing measurement.
 from psychopy import core, visual, gui, data, event, logging, monitors
 import labjackU3
 import random
+import numpy as np  # Adding numpy for better random number generation
 import os
 import csv
 from datetime import datetime
@@ -17,16 +18,20 @@ from datetime import datetime
 TARGET_LETTERS = ['C', 'D', 'H', 'K', 'N', 'F', 'R', 'S', 'V', 'Z']
 DISTRACTORS = [str(i) for i in range(1, 10)]
 N_STREAM_ITEMS = 16
-TARGET_POS_MIN = 3 
+TARGET_POS_MIN = 5 
 TARGET_POS_MAX = 8 
 FIXATION_PRE_STREAM_DUR = 0.700 
 FIXATION_POST_STREAM_RESPONSE_DUR = 0.5 
 FIXATION_POST_STREAM_NO_RESPONSE_DUR = 1.000 
-FIXATION_SYMBOLS = ['+', '=']  # Symbols used for the end of stream
+FIXATION_SYMBOLS = ['-', '=']  # Symbols used for the end of stream - changed from + to -
+
+# --- Pseudorandom sequence generation ---
+# Use a fixed seed for reproducibility
+RANDOM_SEED = 42
 
 # --- Photodiode constants ---
 PHOTODIODE_SIZE = 0.8  # Size in degrees of visual angle
-PHOTODIODE_POSITION = (10, -8)  # Position at bottom right (adjust based on your screen)
+PHOTODIODE_POSITION = (3.5, -2)  # Position at bottom right (adjust based on your screen)
 
 # --- Item Duration ---
 ITEM_DURATION_MS = 120  # Target duration in milliseconds
@@ -148,7 +153,7 @@ logging.console.setLevel(logging.WARNING)
 monitor_name = 'testMonitor'
 mon = monitors.Monitor(monitor_name)
 mon.setDistance(float(exp_info['Viewing Distance (cm)']))
-mon.setWidth(121)
+mon.setWidth(47.8)
 mon.setSizePix((1920,1080))  # Set to your screen resolution
 print(f"Monitor res: {mon.getSizePix()} px")
 mon.save()
@@ -197,20 +202,21 @@ instruction_text = visual.TextStim(win=win, text=(
     "Each stream contains numbers and ONE letter.\n"
     "Your tasks are to:\n"
     "1) Identify the LETTER in the stream.\n"
-    "2) Identify the symbol at the end of the stream (+ or =).\n"
+    "2) Identify the symbol at the end of the stream (- or =).\n"
     "First, there will be a short practice.\n"
     "Press SPACE or ENTER to start the practice."), height=0.4, wrapWidth=20)
 practice_instruction_text = visual.TextStim(win=win, text="Practice Run\nPress SPACE or ENTER to begin.", height=0.4, wrapWidth=25)
-left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\nPlease cover your RIGHT eye now.\nYou will need to identify: 1) the letter in each trial and 2) the end symbol (+ or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
-right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\nPlease cover your LEFT eye now.\nYou will need to identify: 1) the letter in each trial and 2) the end symbol (+ or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
-left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2\nKeep your RIGHT eye covered.\nIn this part, you do NOT need to identify the letter, but you still need to identify the end symbol (+ or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
-right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2\nKeep your LEFT eye covered.\nIn this part, you do NOT need to identify the letter, but you still need to identify the end symbol (+ or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
+left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\nPlease cover your RIGHT eye now.\nYou will need to identify: \n1) the letter in each trial and \n2) the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
+right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\nPlease cover your LEFT eye now.\nYou will need to identify: \n1) the letter in each trial and \n2) the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
+left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2\nKeep your RIGHT eye covered.\nIn this part, you do NOT need to identify the letter, \nbut you still need to identify the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
+right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2\nKeep your LEFT eye covered.\nIn this part, you do NOT need to identify the letter, \nbut you still need to identify the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
 switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Block Complete\nNow we\\'ll switch to your RIGHT eye.\nPlease take a short break if needed.\nPress SPACE or ENTER when you\\'re ready to continue.", height=0.5, wrapWidth=20)
 fixation_cross = visual.TextStim(win=win, text='+', height=1, font=snellen_font)
+minus_sign = visual.TextStim(win=win, text='-', height=1, font=snellen_font)  # New stimulus for minus sign
 equal_sign = visual.TextStim(win=win, text='=', height=1, font=snellen_font) # New stimulus for equals sign
 response_prompt_text = visual.TextStim(win=win, text="Which letter did you see?\n(Type the letter and press ENTER)", height=0.5, wrapWidth=20)
 typed_response_text = visual.TextStim(win=win, text="", height=1, pos=(0, -2))
-symbol_prompt_text = visual.TextStim(win=win, text="What symbol was shown at the end?\n(+ or =)\n(Type + or = and press ENTER)", height=0.5, wrapWidth=20) # New prompt for symbol
+symbol_prompt_text = visual.TextStim(win=win, text="What symbol was shown at the end?\n(- or =)\n(Type - or = and press ENTER)", height=0.5, wrapWidth=20) # Updated prompt for symbol
 typed_symbol_text = visual.TextStim(win=win, text="", height=1.5, pos=(0, -2)) # New text for typed symbol
 next_trial_text = visual.TextStim(win=win, text="Press SPACE to start the next trial.", height=0.5, wrapWidth=20)
 goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\nThe experiment is now complete.", height=0.5, wrapWidth=25)
@@ -392,18 +398,27 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
     return response_str
 
 def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=True, end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR):
-    target_letter = random.choice(TARGET_LETTERS)
-    target_position = random.randint(TARGET_POS_MIN, TARGET_POS_MAX)
-    end_symbol = random.choice(FIXATION_SYMBOLS)  # Randomly choose + or =
+    # Create a seeded random number generator for this trial
+    # We use the participant ID and trial parameters to create a unique but reproducible seed
+    seed_value = int(hash(str(exp_info['Participant ID']) + str(stim_size_deg) + str(require_response)) % 2**32)
+    rng = np.random.RandomState(seed_value)
+    
+    # Use the seeded RNG for all "random" choices
+    target_letter = TARGET_LETTERS[rng.randint(0, len(TARGET_LETTERS))]
+    target_position = rng.randint(TARGET_POS_MIN, TARGET_POS_MAX + 1)  # +1 because randint upper bound is exclusive
+    end_symbol = FIXATION_SYMBOLS[rng.randint(0, len(FIXATION_SYMBOLS))]  # Random + or =
 
     stream = []
     for i in range(N_STREAM_ITEMS):
         if i == target_position:
             stream.append(target_letter)
         else:
-            distractor = random.choice(DISTRACTORS)
-            while stream and distractor == stream[-1]:
-                distractor = random.choice(DISTRACTORS)
+            # Choose a distractor that's different from the last item in the stream
+            while True:
+                distractor_idx = rng.randint(0, len(DISTRACTORS))
+                distractor = DISTRACTORS[distractor_idx]
+                if not stream or distractor != stream[-1]:
+                    break
             stream.append(distractor)
 
     # Display fixation cross before the stream
@@ -445,9 +460,9 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
             if frame == 0:
                 photodiode_patch.fillColor = 'black'
 
-    # Display the end symbol (+ or =)
-    if end_symbol == '+':
-        fixation_cross.draw()
+    # Display the end symbol (- or =)
+    if end_symbol == '-':
+        minus_sign.draw()
     else:
         equal_sign.draw()
     

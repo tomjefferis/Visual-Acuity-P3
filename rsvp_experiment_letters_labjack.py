@@ -316,7 +316,7 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
     # Determine active_allowed_chars based on the prompt type
     if prompt_stim == symbol_prompt_text: # Symbol prompt
         # expected_chars_list is ['-', '='] when called for symbol prompt
-        active_allowed_chars = [char.upper() for char in expected_chars_list if char in ['+', '-', '=']] if expected_chars_list else ['-', '=']
+        active_allowed_chars = [char.upper() for char in expected_chars_list if char in ['-', '=']] if expected_chars_list else ['-', '=']
     elif prompt_stim == response_prompt_text: # Letter prompt
         # expected_chars_list is None when called for letter prompt
         active_allowed_chars = [chr(ord('A') + i) for i in range(26)] # Default to all uppercase letters
@@ -332,8 +332,8 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
         for i in range(26):
             base_listen_keys.append(chr(ord('a') + i)) # Listen for 'a', 'b', ...
 
-    if '+' in active_allowed_chars or '-' in active_allowed_chars or '=' in active_allowed_chars:
-        base_listen_keys.extend(['equal', 'plus', 'minus', 'kp_add', 'kp_subtract', 'kp_equal'])
+    if '-' in active_allowed_chars or '=' in active_allowed_chars:
+        base_listen_keys.extend(['equal', 'minus', 'kp_subtract', 'kp_equal'])
 
     listen_for_key_names = list(set(base_listen_keys)) # Ensure unique key names
 
@@ -377,8 +377,8 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
                 char_to_add = None
                 is_shift_pressed = mods.get('shift', False)
 
-                if key_name_pressed == 'equal': # Handle '=' and Shift+'=' -> '+'
-                    char_to_add = '+' if is_shift_pressed else '='
+                if key_name_pressed == 'equal': # Handle '=' key
+                    char_to_add = '='
                 elif key_name_pressed == 'minus': # Handle '-' key
                     char_to_add = '-'
                 elif key_name_pressed in key_name_to_char_map: # For letters and other mapped keys
@@ -494,7 +494,7 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
         letter_accuracy = 'N/A'
     
     # Always collect symbol response
-    symbol_response = collect_response(symbol_prompt_text, typed_symbol_text, expected_chars_list=['+', '='])
+    symbol_response = collect_response(symbol_prompt_text, typed_symbol_text, expected_chars_list=['-', '='])
     symbol_accuracy = 1 if symbol_response == end_symbol else 0
 
     return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy

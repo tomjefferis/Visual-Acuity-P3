@@ -37,7 +37,7 @@ PHOTODIODE_POSITION = (4, -2)  # Position at bottom right (adjust based on your 
 ITEM_DURATION_MS = 120  # Target duration in milliseconds
 PRACTICE_SPEED_FACTOR = 0.75  # Practice speed 0-1
 
-N_TRIALS_PER_SIZE = 1
+N_TRIALS_PER_SIZE = 16
 N_PRACTICE_TRIALS = 2 
 CONDITIONS_FILE = 'conditions.csv'
 DATA_FOLDER = 'data' # Folder to save data files
@@ -204,7 +204,7 @@ instruction_text = visual.TextStim(win=win, text=(
     "1) Identify the LETTER in the stream.\n"
     "2) Identify the symbol at the end of the stream (- or =).\n"
     "First, there will be a short practice.\n"
-    "Press SPACE or ENTER to start the practice."), height=0.4, wrapWidth=20)
+    "Press SPACE or ENTER to start the practice."), height=0.3, wrapWidth=20)
 practice_instruction_text = visual.TextStim(win=win, text="Practice Run\nPress SPACE or ENTER to begin.", height=0.3, wrapWidth=25)
 left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\nPlease cover your RIGHT eye now.\nYou will need to identify: \n1) the letter in each trial and \n2) the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.3, wrapWidth=20)
 right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\nPlease cover your LEFT eye now.\nYou will need to identify: \n1) the letter in each trial and \n2) the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.3, wrapWidth=20)
@@ -291,7 +291,7 @@ def show_message(text_stim, wait_keys=['space', 'return', 'enter']):
 
 def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
     """Collects a typed response until Enter is pressed.
-    Handles mapping of PsychoPy key names to characters for letters, '+', and '='.
+    Handles mapping of PsychoPy key names to characters for letters, '+', '-', and '='.
     Correctly interprets Shift + '=' as '+'.
     """
     response_str = ""
@@ -306,15 +306,17 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
         'o': 'O', 'p': 'P', 'q': 'Q', 'r': 'R', 's': 'S', 't': 'T', 'u': 'U',
         'v': 'V', 'w': 'W', 'x': 'X', 'y': 'Y', 'z': 'Z',
         'plus': '+',        # For a dedicated '+' key (e.g., on numpad or some keyboards)
+        'minus': '-',       # For a dedicated '-' key
         'kp_add': '+',      # Numpad '+'
+        'kp_subtract': '-', # Numpad '-'
         'kp_equal': '=',    # Numpad '=' (if it exists and is used)
     }
 
     active_allowed_chars = []
     # Determine active_allowed_chars based on the prompt type
     if prompt_stim == symbol_prompt_text: # Symbol prompt
-        # expected_chars_list is ['+', '='] when called for symbol prompt
-        active_allowed_chars = [char.upper() for char in expected_chars_list if char in ['+', '=']] if expected_chars_list else ['+', '=']
+        # expected_chars_list is ['-', '='] when called for symbol prompt
+        active_allowed_chars = [char.upper() for char in expected_chars_list if char in ['+', '-', '=']] if expected_chars_list else ['-', '=']
     elif prompt_stim == response_prompt_text: # Letter prompt
         # expected_chars_list is None when called for letter prompt
         active_allowed_chars = [chr(ord('A') + i) for i in range(26)] # Default to all uppercase letters
@@ -330,8 +332,8 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
         for i in range(26):
             base_listen_keys.append(chr(ord('a') + i)) # Listen for 'a', 'b', ...
 
-    if '+' in active_allowed_chars or '=' in active_allowed_chars:
-        base_listen_keys.extend(['equal', 'plus', 'kp_add', 'kp_equal'])
+    if '+' in active_allowed_chars or '-' in active_allowed_chars or '=' in active_allowed_chars:
+        base_listen_keys.extend(['equal', 'plus', 'minus', 'kp_add', 'kp_subtract', 'kp_equal'])
 
     listen_for_key_names = list(set(base_listen_keys)) # Ensure unique key names
 
@@ -377,7 +379,9 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
 
                 if key_name_pressed == 'equal': # Handle '=' and Shift+'=' -> '+'
                     char_to_add = '+' if is_shift_pressed else '='
-                elif key_name_pressed in key_name_to_char_map: # For letters and other mapped keys ('plus', 'kp_add', 'kp_equal')
+                elif key_name_pressed == 'minus': # Handle '-' key
+                    char_to_add = '-'
+                elif key_name_pressed in key_name_to_char_map: # For letters and other mapped keys
                     char_to_add = key_name_to_char_map[key_name_pressed]
                 
                 if char_to_add and char_to_add in active_allowed_chars:

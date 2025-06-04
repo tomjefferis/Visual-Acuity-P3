@@ -25,8 +25,8 @@ FIXATION_POST_STREAM_NO_RESPONSE_DUR = 1.000
 FIXATION_SYMBOLS = ['+', '=']  # Symbols used for the end of stream
 
 # --- Photodiode constants ---
-PHOTODIODE_SIZE = 0.5  # Size in degrees of visual angle
-PHOTODIODE_POSITION = (14, -8)  # Position at bottom right (adjust based on your screen)
+PHOTODIODE_SIZE = 0.8  # Size in degrees of visual angle
+PHOTODIODE_POSITION = (10, -8)  # Position at bottom right (adjust based on your screen)
 
 # --- Item Duration ---
 ITEM_DURATION_MS = 120  # Target duration in milliseconds
@@ -218,10 +218,9 @@ goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\nThe 
 
 rsvp_stim = visual.TextStim(win=win, text='', height=1.0, font=snellen_font) 
 
-# Create photodiode patch stimulus
-photodiode_patch = visual.Rect(win=win,
-                             width=PHOTODIODE_SIZE,
-                             height=PHOTODIODE_SIZE,
+# Create photodiode patch stimulus (circular)
+photodiode_patch = visual.Circle(win=win,
+                             radius=PHOTODIODE_SIZE/2,  # Radius is half the size
                              pos=PHOTODIODE_POSITION,
                              fillColor='black',
                              lineColor=None)

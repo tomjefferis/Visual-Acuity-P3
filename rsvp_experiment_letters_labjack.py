@@ -31,7 +31,7 @@ RANDOM_SEED = 42
 
 # --- Photodiode constants ---
 PHOTODIODE_SIZE = 0.8  # Size in degrees of visual angle
-PHOTODIODE_POSITION = (3.5, -2)  # Position at bottom right (adjust based on your screen)
+PHOTODIODE_POSITION = (4, -2)  # Position at bottom right (adjust based on your screen)
 
 # --- Item Duration ---
 ITEM_DURATION_MS = 120  # Target duration in milliseconds
@@ -205,12 +205,12 @@ instruction_text = visual.TextStim(win=win, text=(
     "2) Identify the symbol at the end of the stream (- or =).\n"
     "First, there will be a short practice.\n"
     "Press SPACE or ENTER to start the practice."), height=0.4, wrapWidth=20)
-practice_instruction_text = visual.TextStim(win=win, text="Practice Run\nPress SPACE or ENTER to begin.", height=0.4, wrapWidth=25)
-left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\nPlease cover your RIGHT eye now.\nYou will need to identify: \n1) the letter in each trial and \n2) the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
-right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\nPlease cover your LEFT eye now.\nYou will need to identify: \n1) the letter in each trial and \n2) the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
-left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2\nKeep your RIGHT eye covered.\nIn this part, you do NOT need to identify the letter, \nbut you still need to identify the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
-right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2\nKeep your LEFT eye covered.\nIn this part, you do NOT need to identify the letter, \nbut you still need to identify the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.5, wrapWidth=20)
-switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Block Complete\nNow we\\'ll switch to your RIGHT eye.\nPlease take a short break if needed.\nPress SPACE or ENTER when you\\'re ready to continue.", height=0.5, wrapWidth=20)
+practice_instruction_text = visual.TextStim(win=win, text="Practice Run\nPress SPACE or ENTER to begin.", height=0.3, wrapWidth=25)
+left_eye_instruction_text = visual.TextStim(win=win, text="Left Eye Block - Part 1\nPlease cover your RIGHT eye now.\nYou will need to identify: \n1) the letter in each trial and \n2) the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.3, wrapWidth=20)
+right_eye_instruction_text = visual.TextStim(win=win, text="Right Eye Block - Part 1\nPlease cover your LEFT eye now.\nYou will need to identify: \n1) the letter in each trial and \n2) the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.3, wrapWidth=20)
+left_eye_no_response_text = visual.TextStim(win=win, text="Left Eye Block - Part 2\nKeep your RIGHT eye covered.\nIn this part, you do NOT need to identify the letter, \nbut you still need to identify the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.3, wrapWidth=20)
+right_eye_no_response_text = visual.TextStim(win=win, text="Right Eye Block - Part 2\nKeep your LEFT eye covered.\nIn this part, you do NOT need to identify the letter, \nbut you still need to identify the end symbol (- or =).\nPress SPACE or ENTER to begin.", height=0.3, wrapWidth=20)
+switch_to_right_eye_text = visual.TextStim(win=win, text="Left Eye Block Complete\nNow we\\'ll switch to your RIGHT eye.\nPlease take a short break if needed.\nPress SPACE or ENTER when you\\'re ready to continue.", height=0.3, wrapWidth=20)
 fixation_cross = visual.TextStim(win=win, text='+', height=1, font=snellen_font)
 minus_sign = visual.TextStim(win=win, text='-', height=1, font=snellen_font)  # New stimulus for minus sign
 equal_sign = visual.TextStim(win=win, text='=', height=1, font=snellen_font) # New stimulus for equals sign

@@ -333,7 +333,8 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
             base_listen_keys.append(chr(ord('a') + i)) # Listen for 'a', 'b', ...
 
     if '-' in active_allowed_chars or '=' in active_allowed_chars:
-        base_listen_keys.extend(['equal', 'minus', 'kp_subtract', 'kp_equal'])
+        # Add all possible key names that could represent minus or equals
+        base_listen_keys.extend(['equal', 'minus', 'kp_subtract', 'kp_equal', 'num_subtract', 'hyphen', 'dash'])
 
     listen_for_key_names = list(set(base_listen_keys)) # Ensure unique key names
 
@@ -379,7 +380,7 @@ def collect_response(prompt_stim, typed_stim, expected_chars_list=None):
 
                 if key_name_pressed == 'equal': # Handle '=' key
                     char_to_add = '='
-                elif key_name_pressed == 'minus': # Handle '-' key
+                elif key_name_pressed == 'minus' or key_name_pressed == 'hyphen' or key_name_pressed == 'dash' or key_name_pressed == 'num_subtract' or key_name_pressed == 'kp_subtract': # Handle all possible minus key variants
                     char_to_add = '-'
                 elif key_name_pressed in key_name_to_char_map: # For letters and other mapped keys
                     char_to_add = key_name_to_char_map[key_name_pressed]

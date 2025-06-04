@@ -3,10 +3,10 @@ PsychoPy script for an RSVP (Rapid Serial Visual Presentation) experiment.
 Presents streams of letters (target) and numbers (distractors) at varying sizes.
 Collects target identification responses for some blocks.
 Runs separate blocks for left and right eyes.
+Includes a photodiode patch for precise timing measurement.
 """
 
 from psychopy import core, visual, gui, data, event, logging, monitors
-# Replace psychopy.hardware.labjacks import with our custom implementation
 import labjackU3
 import random
 import os
@@ -23,6 +23,10 @@ FIXATION_PRE_STREAM_DUR = 0.700
 FIXATION_POST_STREAM_RESPONSE_DUR = 0.5 
 FIXATION_POST_STREAM_NO_RESPONSE_DUR = 1.000 
 FIXATION_SYMBOLS = ['+', '=']  # Symbols used for the end of stream
+
+# --- Photodiode constants ---
+PHOTODIODE_SIZE = 0.5  # Size in degrees of visual angle
+PHOTODIODE_POSITION = (14, -8)  # Position at bottom right (adjust based on your screen)
 
 # --- Item Duration ---
 ITEM_DURATION_MS = 120  # Target duration in milliseconds
@@ -214,6 +218,14 @@ goodbye_text = visual.TextStim(win=win, text="Thank you for participating!\nThe 
 
 rsvp_stim = visual.TextStim(win=win, text='', height=1.0, font=snellen_font) 
 
+# Create photodiode patch stimulus
+photodiode_patch = visual.Rect(win=win,
+                             width=PHOTODIODE_SIZE,
+                             height=PHOTODIODE_SIZE,
+                             pos=PHOTODIODE_POSITION,
+                             fillColor='black',
+                             lineColor=None)
+
 kb = event.BuilderKeyResponse()
 
 
@@ -397,6 +409,9 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
 
     # Display fixation cross before the stream
     fixation_cross.draw()
+    # Set photodiode patch to black for the fixation period
+    photodiode_patch.fillColor = 'black'
+    photodiode_patch.draw()
     win.flip()
     core.wait(FIXATION_PRE_STREAM_DUR)
 
@@ -418,15 +433,28 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
                 # Send item-specific trigger for each stimulus
                 send_trigger(ljack, TRIGGER_MAP[item])
                 logging.exp(f"Stimulus Onset - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
-
+                
+                # Set photodiode patch to white at the onset of each stimulus
+                photodiode_patch.fillColor = 'white'
+            
+            # Draw stimulus and photodiode patch
             rsvp_stim.draw()
+            photodiode_patch.draw()
             win.flip()
+            
+            # Set photodiode patch back to black after the first frame
+            if frame == 0:
+                photodiode_patch.fillColor = 'black'
 
     # Display the end symbol (+ or =)
     if end_symbol == '+':
         fixation_cross.draw()
     else:
         equal_sign.draw()
+    
+    # Set photodiode patch to black for the end symbol period
+    photodiode_patch.fillColor = 'black'
+    photodiode_patch.draw()
     
     send_trigger(ljack, TRIGGER_STREAM_END)
     logging.exp(f"RSVP Stream End - End symbol: {end_symbol}") # Log the chosen end symbol

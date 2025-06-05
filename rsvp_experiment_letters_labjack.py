@@ -37,7 +37,7 @@ PHOTODIODE_POSITION = (4, -2)  # Position at bottom right (adjust based on your 
 ITEM_DURATION_MS = 120  # Target duration in milliseconds
 PRACTICE_SPEED_FACTOR = 0.75  # Practice speed 0-1
 
-N_TRIALS_PER_SIZE = 5
+N_TRIALS_PER_SIZE = 5 
 N_PRACTICE_TRIALS = 2 
 CONDITIONS_FILE = 'conditions.csv'
 DATA_FOLDER = 'data' # Folder to save data files

@@ -44,7 +44,6 @@ DATA_FOLDER = 'data' # Folder to save data files
 
 # --- Trigger Values ---
 TRIGGER_STREAM_START = 101    # First item onset
-TRIGGER_TARGET_ONSET = 102    # Target presentation 
 TRIGGER_STREAM_END = 103      # End of stream (post-stream fixation onset)
 
 # Dictionary mapping stimuli to trigger values
@@ -444,10 +443,6 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
             if i == 0 and frame == 0:
                 send_trigger(ljack, TRIGGER_STREAM_START)
                 logging.exp(f"RSVP Stream Start - Item: {item}")
-            
-            if i == target_position and frame == 0:
-                send_trigger(ljack, TRIGGER_TARGET_ONSET)
-                logging.exp(f"Target Letter Onset - Letter: {item}")
             
             if frame == 0:
                 # Send item-specific trigger for each stimulus

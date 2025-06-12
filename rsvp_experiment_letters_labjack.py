@@ -43,7 +43,7 @@ CONDITIONS_FILE = 'conditions.csv'
 DATA_FOLDER = 'data' # Folder to save data files
 
 # --- Trigger Values ---
-TRIGGER_STREAM_START = 101    # First item onset
+TRIGGER_STREAM_START = 101    # Stream start (sent before first item)
 TRIGGER_STREAM_END = 103      # End of stream (post-stream fixation onset)
 
 # Dictionary mapping stimuli to trigger values
@@ -269,7 +269,7 @@ practice_handler = data.TrialHandler(nReps=1, method='random',
                                      originPath=-1,
                                      trialList=practice_trials_list,
                                      name='practice')
-exp.addLoop(practice_handler)
+# Note: Not adding practice_handler to exp since we don't want to log practice data
 
 trials_response = data.TrialHandler(nReps=1, method='sequential',
                                    originPath=-1,
@@ -432,22 +432,36 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
     photodiode_patch.fillColor = 'black'
     photodiode_patch.draw()
     win.flip()
-    core.wait(FIXATION_PRE_STREAM_DUR)
-
-    # RSVP stream presentation
+    core.wait(FIXATION_PRE_STREAM_DUR)    # RSVP stream presentation
+    # Send stream start trigger before any items are displayed
+    send_trigger(ljack, TRIGGER_STREAM_START)
+    logging.exp(f"RSVP Stream Start - Target at position {target_position}")
+      # Wait one frame to ensure stream start trigger is processed before item triggers
+    for frame in range(1):
+        fixation_cross.draw()
+        photodiode_patch.fillColor = 'black'
+        photodiode_patch.draw()
+        win.flip()
+    
     for i, item in enumerate(stream):
         rsvp_stim.setText(item)
         rsvp_stim.height = stim_size_deg
-        
         for frame in range(item_duration_frames):
-            if i == 0 and frame == 0:
-                send_trigger(ljack, TRIGGER_STREAM_START)
-                logging.exp(f"RSVP Stream Start - Item: {item}")
-            
             if frame == 0:
-                # Send item-specific trigger for each stimulus
-                send_trigger(ljack, TRIGGER_MAP[item])
-                logging.exp(f"Stimulus Onset - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
+                # Send triggers for pre-target items and target
+                if i == target_position - 2:
+                    # Send trigger for pre-target -2 stimulus (will be a number)
+                    send_trigger(ljack, TRIGGER_MAP[item])
+                    logging.exp(f"Pre-target -2 stimulus - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
+                elif i == target_position - 1:
+                    # Send trigger for pre-target -1 stimulus (will be a number)
+                    send_trigger(ljack, TRIGGER_MAP[item])
+                    logging.exp(f"Pre-target -1 stimulus - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
+                elif i == target_position:
+                    # Send target-specific trigger (maintains individual letter codes)
+                    send_trigger(ljack, TRIGGER_MAP[item])
+                    logging.exp(f"Target Letter Onset - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
+                # No triggers for other distractor items to reduce trigger load
                 
                 # Set photodiode patch to white at the onset of each stimulus
                 photodiode_patch.fillColor = 'white'
@@ -488,14 +502,86 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
         letter_accuracy = 1 if letter_response == target_letter else 0
     else:
         letter_response = 'N/A'
+        letter_accuracy = 'N/A'    # Always collect symbol response
+    symbol_response = collect_response(symbol_prompt_text, typed_symbol_text, expected_chars_list=['-', '='])
+    symbol_accuracy = 1 if symbol_response == end_symbol else 0
+
+    # Extract pre-target stimuli for data logging
+    pre_target_2 = stream[target_position - 2] if target_position >= 2 else 'N/A'
+    pre_target_1 = stream[target_position - 1] if target_position >= 1 else 'N/A'
+
+    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy, pre_target_2, pre_target_1
+
+def run_practice_trial(win, stim_size_deg, item_duration_frames, require_response=True, end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR, trial_num=0):
+    """
+    Simplified RSVP trial for practice - no photodiode flashes, triggers, or detailed logging.
+    """
+    # Create a seeded random number generator for this trial
+    seed_value = int(hash(str(stim_size_deg) + str(require_response) + str(trial_num)) % 2**32)
+    rng = np.random.RandomState(seed_value)
+    
+    # Use the seeded RNG for all "random" choices
+    target_letter = TARGET_LETTERS[rng.randint(0, len(TARGET_LETTERS))]
+    target_position = rng.randint(TARGET_POS_MIN, TARGET_POS_MAX + 1)
+    end_symbol = FIXATION_SYMBOLS[rng.randint(0, len(FIXATION_SYMBOLS))]
+
+    stream = []
+    for i in range(N_STREAM_ITEMS):
+        if i == target_position:
+            stream.append(target_letter)
+        else:
+            while True:
+                distractor_idx = rng.randint(0, len(DISTRACTORS))
+                distractor = DISTRACTORS[distractor_idx]
+                if not stream or distractor != stream[-1]:
+                    break
+            stream.append(distractor)
+
+    # Display fixation cross before the stream (no photodiode)
+    fixation_cross.draw()
+    win.flip()
+    core.wait(FIXATION_PRE_STREAM_DUR)
+    
+    # RSVP stream presentation (no triggers or photodiode)
+    for i, item in enumerate(stream):
+        rsvp_stim.setText(item)
+        rsvp_stim.height = stim_size_deg
+        for frame in range(item_duration_frames):
+            # Just draw the stimulus (no photodiode or triggers)
+            rsvp_stim.draw()
+            win.flip()
+
+    # Display the end symbol (no photodiode)
+    if end_symbol == '-':
+        minus_sign.draw()
+    else:
+        equal_sign.draw()
+    
+    win.flip()
+    core.wait(end_fix_duration)
+    win.flip()  # Clear the screen
+
+    letter_response = None
+    letter_accuracy = None
+    symbol_response = None
+    symbol_accuracy = None
+
+    if require_response:
+        letter_response = collect_response(response_prompt_text, typed_response_text, expected_chars_list=None)
+        letter_accuracy = 1 if letter_response == target_letter else 0
+    else:
+        letter_response = 'N/A'
         letter_accuracy = 'N/A'
     
     # Always collect symbol response
     symbol_response = collect_response(symbol_prompt_text, typed_symbol_text, expected_chars_list=['-', '='])
     symbol_accuracy = 1 if symbol_response == end_symbol else 0
 
-    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy
+    # Extract pre-target stimuli for consistency
+    pre_target_2 = stream[target_position - 2] if target_position >= 2 else 'N/A'
+    pre_target_1 = stream[target_position - 1] if target_position >= 1 else 'N/A'
 
+    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy, pre_target_2, pre_target_1
 def run_font_size_test_mode(win):
     """
     Test mode to display a sample letter at each font size.
@@ -542,13 +628,13 @@ show_message(welcome_text)
 if exp_info['Test Mode'] == 'Yes':
     # Run test mode
     run_font_size_test_mode(win)
-    
-    # Exit after test mode is complete
+      # Exit after test mode is complete
     goodbye_text = visual.TextStim(win=win, text="Font size test complete.\nThank you!", height=1.0)
     goodbye_text.draw()
     win.flip()
     core.wait(2.0)
-      # Clean up and exit
+    
+    # Clean up and exit
     if ljack is not None:
         labjackU3.trigger(0)  # Reset the trigger to 0
         logging.exp("LabJack reset at experiment end")
@@ -565,25 +651,16 @@ else:
         current_trial_global += 1
         stim_size = practice_trial_data['stimSizeDeg']
         
-        target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc = run_rsvp_trial(win,
+        # Use simplified practice trial function (no photodiode, triggers, or data logging)
+        target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1 = run_practice_trial(win,
                                              stim_size_deg=stim_size,
                                              item_duration_frames=PRACTICE_DURATION_FRAMES,
                                              require_response=True,
                                              end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR,
                                              trial_num=trial_num_practice)
 
-        practice_handler.addData('block_type', 'practice')
-        practice_handler.addData('trial_num_block', trial_num_practice + 1)
-        practice_handler.addData('trial_num_global', current_trial_global)
-        practice_handler.addData('target_letter', target)
-        practice_handler.addData('target_position', pos)
-        practice_handler.addData('stim_size_deg', stim_size)
-        practice_handler.addData('letter_response', l_resp)
-        practice_handler.addData('letter_accuracy', l_acc)
-        practice_handler.addData('end_symbol', e_sym)
-        practice_handler.addData('symbol_response', s_resp)
-        practice_handler.addData('symbol_accuracy', s_acc)
-        exp.nextEntry()
+        # No data logging for practice trials - just provide feedback
+        print(f"Practice trial {trial_num_practice + 1}: Target='{target}', Response='{l_resp}', Correct={l_acc}")
 
         if trial_num_practice < N_PRACTICE_TRIALS - 1:
             show_message(next_trial_text, wait_keys=['space'])
@@ -604,16 +681,14 @@ else:
         
         trials_no_response = data.TrialHandler(nReps=1, method='sequential',
                                               originPath=-1,
-                                              trialList=expanded_trial_list,
-                                              name='trials_no_response')
+                                              trialList=expanded_trial_list,                                              name='trials_no_response')
 
         print(f"\n--- Starting {eye.capitalize()} Eye Block - Part 1 (Response) ---")
         exp.addLoop(trials_response)
         for trial_num_block, trial_data in enumerate(trials_response):
             current_trial_global += 1
             stim_size = trial_data['stimSizeDeg']
-
-            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc = run_rsvp_trial(
+            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1 = run_rsvp_trial(
                 win,
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,
@@ -624,7 +699,7 @@ else:
 
             trials_response.addData('block_type', f'{block_prefix}_response')
             trials_response.addData('trial_num_block', trial_num_block + 1)
-            trials_response.addData('trial_num_global', current_trial_global)
+            trials_response.addData('trial_num_global', current_trial_global)            
             trials_response.addData('target_letter', target)
             trials_response.addData('target_position', pos)
             trials_response.addData('stim_size_deg', stim_size) # Added missing stim_size_deg
@@ -633,6 +708,8 @@ else:
             trials_response.addData('end_symbol', e_sym)
             trials_response.addData('symbol_response', s_resp)
             trials_response.addData('symbol_accuracy', s_acc)
+            trials_response.addData('pre_target_2', pre_t2)
+            trials_response.addData('pre_target_1', pre_t1)
             exp.nextEntry()
 
             if trial_num_block < n_total_trials_per_block - 1:
@@ -650,8 +727,7 @@ else:
         for trial_num_block, trial_data in enumerate(trials_no_response):
             current_trial_global += 1
             stim_size = trial_data['stimSizeDeg']
-
-            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc = run_rsvp_trial(
+            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1 = run_rsvp_trial(
                 win,
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,
@@ -671,12 +747,14 @@ else:
             trials_no_response.addData('end_symbol', e_sym)
             trials_no_response.addData('symbol_response', s_resp)
             trials_no_response.addData('symbol_accuracy', s_acc)
+            trials_no_response.addData('pre_target_2', pre_t2)
+            trials_no_response.addData('pre_target_1', pre_t1)
             exp.nextEntry()
 
             if trial_num_block < n_total_trials_per_block - 1:
                 show_message(next_trial_text, wait_keys=['space'])
             else:
-                core.wait(1.0) # Wait a bit after the last trial of the no-response block
+                core.wait(0.5) # Wait a bit after the last trial of the no-response block
 
         if eye == 'left':
             show_message(switch_to_right_eye_text)

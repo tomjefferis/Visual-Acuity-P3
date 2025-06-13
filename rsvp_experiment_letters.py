@@ -414,8 +414,7 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
     for i, item in enumerate(stream):
         rsvp_stim.setText(item)
         rsvp_stim.height = stim_size_deg
-        
-        for frame in range(item_duration_frames):
+          for frame in range(item_duration_frames):
             if i == 0 and frame == 0:
                 send_trigger(port, TRIGGER_STREAM_START)
                 logging.exp(f"RSVP Stream Start - Item: {item}")
@@ -428,6 +427,14 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
                 # Send item-specific trigger for each stimulus
                 send_trigger(port, TRIGGER_MAP[item])
                 logging.exp(f"Stimulus Onset - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
+                
+                # Also send specific triggers for context around target
+                if i == target_position - 2:
+                    logging.exp(f"Pre-target -2 stimulus - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
+                elif i == target_position - 1:
+                    logging.exp(f"Pre-target -1 stimulus - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
+                elif i == target_position + 1:
+                    logging.exp(f"Post-target +1 stimulus - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
 
             rsvp_stim.draw()
             win.flip()
@@ -456,12 +463,16 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
     else:
         letter_response = 'N/A'
         letter_accuracy = 'N/A'
-    
-    # Always collect symbol response
+      # Always collect symbol response
     symbol_response = collect_response(symbol_prompt_text, typed_symbol_text, expected_chars_list=['+', '='])
     symbol_accuracy = 1 if symbol_response == end_symbol else 0
 
-    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy
+    # Extract pre-target and post-target stimuli for data logging
+    pre_target_2 = stream[target_position - 2] if target_position >= 2 else 'N/A'
+    pre_target_1 = stream[target_position - 1] if target_position >= 1 else 'N/A'
+    post_target_1 = stream[target_position + 1] if target_position + 1 < len(stream) else 'N/A'
+
+    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy, pre_target_2, pre_target_1, post_target_1
 
 def run_font_size_test_mode(win):
     """
@@ -532,8 +543,7 @@ else:
     for trial_num_practice, practice_trial_data in enumerate(practice_handler):
         current_trial_global += 1
         stim_size = practice_trial_data['stimSizeDeg']
-        
-        target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc = run_rsvp_trial(win,
+          target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1, post_t1 = run_rsvp_trial(win,
                                              stim_size_deg=stim_size,
                                              item_duration_frames=PRACTICE_DURATION_FRAMES,
                                              require_response=True,
@@ -578,9 +588,7 @@ else:
         exp.addLoop(trials_response)
         for trial_num_block, trial_data in enumerate(trials_response):
             current_trial_global += 1
-            stim_size = trial_data['stimSizeDeg']
-
-            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc = run_rsvp_trial(
+            stim_size = trial_data['stimSizeDeg']            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1, post_t1 = run_rsvp_trial(
                 win,
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,
@@ -613,11 +621,10 @@ else:
 
         print(f"\n--- Starting {eye.capitalize()} Eye Block - Part 2 (No Response) ---")
         exp.addLoop(trials_no_response)
-        for trial_num_block, trial_data in enumerate(trials_no_response):
-            current_trial_global += 1
+        for trial_num_block, trial_data in enumerate(trials_no_response):            current_trial_global += 1
             stim_size = trial_data['stimSizeDeg']
 
-            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc = run_rsvp_trial(
+            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1, post_t1 = run_rsvp_trial(
                 win,
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,

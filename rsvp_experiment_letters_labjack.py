@@ -448,7 +448,7 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
         rsvp_stim.height = stim_size_deg
         for frame in range(item_duration_frames):
             if frame == 0:
-                # Send triggers for pre-target items and target
+                # Send triggers for pre-target items, target, and post-target item
                 if i == target_position - 2:
                     # Send trigger for pre-target -2 stimulus (will be a number)
                     send_trigger(ljack, TRIGGER_MAP[item])
@@ -461,6 +461,10 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
                     # Send target-specific trigger (maintains individual letter codes)
                     send_trigger(ljack, TRIGGER_MAP[item])
                     logging.exp(f"Target Letter Onset - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
+                elif i == target_position + 1:
+                    # Send trigger for post-target +1 stimulus (will be a number)
+                    send_trigger(ljack, TRIGGER_MAP[item])
+                    logging.exp(f"Post-target +1 stimulus - Item: {item}, Trigger: {TRIGGER_MAP[item]}")
                 # No triggers for other distractor items to reduce trigger load
                 
                 # Set photodiode patch to white at the onset of each stimulus
@@ -506,11 +510,12 @@ def run_rsvp_trial(win, stim_size_deg, item_duration_frames, require_response=Tr
     symbol_response = collect_response(symbol_prompt_text, typed_symbol_text, expected_chars_list=['-', '='])
     symbol_accuracy = 1 if symbol_response == end_symbol else 0
 
-    # Extract pre-target stimuli for data logging
+    # Extract pre-target and post-target stimuli for data logging
     pre_target_2 = stream[target_position - 2] if target_position >= 2 else 'N/A'
     pre_target_1 = stream[target_position - 1] if target_position >= 1 else 'N/A'
+    post_target_1 = stream[target_position + 1] if target_position + 1 < len(stream) else 'N/A'
 
-    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy, pre_target_2, pre_target_1
+    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy, pre_target_2, pre_target_1, post_target_1
 
 def run_practice_trial(win, stim_size_deg, item_duration_frames, require_response=True, end_fix_duration=FIXATION_POST_STREAM_RESPONSE_DUR, trial_num=0):
     """
@@ -572,16 +577,16 @@ def run_practice_trial(win, stim_size_deg, item_duration_frames, require_respons
     else:
         letter_response = 'N/A'
         letter_accuracy = 'N/A'
-    
-    # Always collect symbol response
+      # Always collect symbol response
     symbol_response = collect_response(symbol_prompt_text, typed_symbol_text, expected_chars_list=['-', '='])
     symbol_accuracy = 1 if symbol_response == end_symbol else 0
 
-    # Extract pre-target stimuli for consistency
+    # Extract pre-target and post-target stimuli for consistency
     pre_target_2 = stream[target_position - 2] if target_position >= 2 else 'N/A'
     pre_target_1 = stream[target_position - 1] if target_position >= 1 else 'N/A'
+    post_target_1 = stream[target_position + 1] if target_position + 1 < len(stream) else 'N/A'
 
-    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy, pre_target_2, pre_target_1
+    return target_letter, target_position, stream, letter_response, letter_accuracy, end_symbol, symbol_response, symbol_accuracy, pre_target_2, pre_target_1, post_target_1
 def run_font_size_test_mode(win):
     """
     Test mode to display a sample letter at each font size.
@@ -652,7 +657,7 @@ else:
         stim_size = practice_trial_data['stimSizeDeg']
         
         # Use simplified practice trial function (no photodiode, triggers, or data logging)
-        target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1 = run_practice_trial(win,
+        target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1, post_t1 = run_practice_trial(win,
                                              stim_size_deg=stim_size,
                                              item_duration_frames=PRACTICE_DURATION_FRAMES,
                                              require_response=True,
@@ -688,7 +693,7 @@ else:
         for trial_num_block, trial_data in enumerate(trials_response):
             current_trial_global += 1
             stim_size = trial_data['stimSizeDeg']
-            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1 = run_rsvp_trial(
+            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1, post_t1 = run_rsvp_trial(
                 win,
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,
@@ -710,6 +715,7 @@ else:
             trials_response.addData('symbol_accuracy', s_acc)
             trials_response.addData('pre_target_2', pre_t2)
             trials_response.addData('pre_target_1', pre_t1)
+            trials_response.addData('post_target_1', post_t1)
             exp.nextEntry()
 
             if trial_num_block < n_total_trials_per_block - 1:
@@ -727,7 +733,7 @@ else:
         for trial_num_block, trial_data in enumerate(trials_no_response):
             current_trial_global += 1
             stim_size = trial_data['stimSizeDeg']
-            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1 = run_rsvp_trial(
+            target, pos, stream_items, l_resp, l_acc, e_sym, s_resp, s_acc, pre_t2, pre_t1, post_t1 = run_rsvp_trial(
                 win,
                 stim_size_deg=stim_size,
                 item_duration_frames=ITEM_DURATION_FRAMES,
@@ -749,6 +755,7 @@ else:
             trials_no_response.addData('symbol_accuracy', s_acc)
             trials_no_response.addData('pre_target_2', pre_t2)
             trials_no_response.addData('pre_target_1', pre_t1)
+            trials_no_response.addData('post_target_1', post_t1)
             exp.nextEntry()
 
             if trial_num_block < n_total_trials_per_block - 1:
